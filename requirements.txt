@@ -1,0 +1,8 @@
+pandas==0.24.2
+typing==3.6.4
+mlxtend==0.14.0
+pm4py==1.2.10
+setuptools==41.0.1
+pyfpgrowth==1.0
+p_privacy_metadata==0.0.4
+numpy==1.18.2
