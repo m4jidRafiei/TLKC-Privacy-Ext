@@ -1,4 +1,4 @@
-from p_tlkc_privacy import Anonymizer, ELRepresentation, MFS, MVS, privacyPreserving, results
+from p_tlkc_privacy import Anonymizer, ELReps, MFS, MVS, privacyPreserving, results
 
 __name__ = 'p_tlkc_privacy'
 __version__ = '0.0.13'

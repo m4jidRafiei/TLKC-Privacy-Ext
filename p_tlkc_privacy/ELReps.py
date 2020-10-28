@@ -2,6 +2,8 @@ import operator
 import datetime
 from pm4py.objects.log.log import Trace, EventLog
 from pm4py.objects.log.util import sorting
+from collections import Counter
+from multiset import Multiset
 
 class ELReps():
 
@@ -26,11 +28,12 @@ class ELReps():
                 # basis for tuple of (event,time)
                 simple_event = [[], []]
                 simple_attr_temp = []
+                life_cycle_value = ''
                 for key, value in event.items():
                     # Filtering out the needed attributes and create new log out of it
                     # simplify timestamp to timeintervalls as precise as spectime
                     # pair[1] = time
-                    if bk_type == 'seq' and time_based and key in time_prefix:
+                    if bk_type == 'sequence' and time_based and key in time_prefix:
                         if event_index == 0:
                             starttime = value
                             time = 0
@@ -63,7 +66,7 @@ class ELReps():
                     else:
                         simple_event[0] = tuple(simple_attr_temp)
 
-                    if bk_type == 'seq' and time_based:
+                    if bk_type == 'sequence' and time_based:
                         simple_event[1] = time
                         tu = (simple_event[0], simple_event[1])
                         trace.append(tu)
@@ -81,7 +84,12 @@ class ELReps():
                         #     tu = (simple_event[0], simple_event[1])
                         #     trace.append(tu)
 
-                    elif bk_type == 'seq' or bk_type == 'mult':
+                    elif bk_type == 'multiset':
+                        tu = (simple_event[0])
+                        trace_temp.append(simple_event[0])
+                        trace.append(tu)
+
+                    elif bk_type == 'sequence': #or bk_type == 'multiset':
                         count_event = trace_temp.count(simple_event[0])
                         simple_event[1] = count_event + 1
                         tu = (simple_event[0], simple_event[1])
@@ -98,6 +106,10 @@ class ELReps():
             #     logsimple[case.attributes["concept:name"]] = {"trace":  sorted(trace), "sensitive": sens}
             #     traces.append( sorted(trace))
             # else:
+
+            if bk_type == 'multiset':
+                trace = self.get_multiset_log(trace)
+
             logsimple[case.attributes["concept:name"]] = {"trace":  trace, "sensitive": sens}
             traces.append(trace)
             # sample all values for a specific sensitive attribute (key) in dict
@@ -107,118 +119,20 @@ class ELReps():
 
         return logsimple, traces, sensitives
 
-    def simplify_LKC_without_time_count(self, sensitive):
-        concept = ["concept:name"]
-        time = ['time:timestamp']
-        logsimple = {}
-        traces = []
-        sensitives = {el: [] for el in sensitive}
-        for case_index, case in enumerate(self.log):
-            # as cache for each case
-            sens = {}
-            trace = []
-            c = []
-            for event_index, event in enumerate(case):
-                # basis for tuple of (event,time)
-                pair = [[], []]
-                for key, value in event.items():
-                    if key in concept:
-                        pair[0] = value
-                    elif key in sensitive:
-                        # sample all sensitive values for one trace in sens
-                        sens[key] = value
-                #pair of event, occurence
-                count_el = c.count(pair[0])
-                tu = (pair[0], count_el + 1)
-                c.append(pair[0])
-                # create trace with pairs (event,time)
-                trace.append(tu)
-            #create simplified log
-            logsimple[case.attributes["concept:name"]] = {"trace": trace, "sensitive": sens}
-            # list with all traces without CaseID
-            traces.append(trace)
-            # sample all values for a specific sensitive attribute (key) in dict
-            for key in sens.keys():
-               # sample all values for a specific sensitive attribute (key) in dict
-                sensitives[key].append(sens[key])
-        return logsimple, traces, sensitives
+    def get_multiset_log(self,alist):
+        mult_log = []
+        alist_tuple = tuple(alist)
+        for s in set(alist):
+            count = alist_tuple.count(s)
+            tu = (s,count)
+            mult_log.append(tu)
+        return mult_log
 
-    def simplify_LKC_without_time_count_set(self, sensitive):
-        concept = ["concept:name"]
-        time = ['time:timestamp']
-        logsimple = {}
-        traces = []
-        sensitives = {el: [] for el in sensitive}
-        for case_index, case in enumerate(self.log):
-            # as cache for each case
-            sens = {}
-            trace = []
-            c = []
-            for event_index, event in enumerate(case):
-                # basis for tuple of (event,time)
-                pair = [[], []]
-                for key, value in event.items():
-                    # Filtering out the needed attributes and create new log out of it
-
-                    # simplify timestamp to timeintervalls as precise as spectime
-                    if key in concept:
-                        pair[0] = value
-                    elif key in sensitive:
-                        # sample all sensitive values for one trace in sens
-                        sens[key] = value
-                #pair of event, occurence
-                count_el = c.count(pair[0])
-                tu = (pair[0], count_el + 1)
-                c.append(pair[0])
-                # create trace with pairs (event,time)
-                trace.append(tu)
-            #create simplified log
-            logsimple[case.attributes["concept:name"]] = {"trace": sorted(trace), "sensitive": sens}
-            # list with all traces without CaseID
-            traces.append(sorted(trace))
-            # sample all values for a specific sensitive attribute (key) in dict
-            for key in sens.keys():
-               # sample all values for a specific sensitive attribute (key) in dict
-                sensitives[key].append(sens[key])
-        return logsimple, traces, sensitives
-
-    def simplify_LKC_without_time_set(self, sensitive):
-        concept = ["concept:name"]
-        time = ['time:timestamp']
-        logsimple = {}
-        traces = []
-        sensitives = {el: [] for el in sensitive}
-        for case_index, case in enumerate(self.log):
-            # as cache for each case
-            sens = {}
-            trace = []
-            c = []
-            for event_index, event in enumerate(case):
-                # basis for tuple of (event,time)
-                pair = [[], []]
-                for key, value in event.items():
-                    # Filtering out the needed attributes and create new log out of it
-
-                    # simplify timestamp to timeintervalls as precise as spectime
-                    if key in concept:
-                        pair[0] = value
-                    elif key in sensitive:
-                        # sample all sensitive values for one trace in sens
-                        sens[key] = value
-                #pair of event, occurence
-                tu = (pair[0], 0)
-                c.append(pair[0])
-                # create trace with pairs (event,time)
-                trace.append(tu)
-            #create simplified log
-            logsimple[case.attributes["concept:name"]] = {"trace": sorted(trace), "sensitive": sens}
-            # list with all traces without CaseID
-            traces.append(sorted(trace))
-            # sample all values for a specific sensitive attribute (key) in dict
-            for key in sens.keys():
-               # sample all values for a specific sensitive attribute (key) in dict
-                sensitives[key].append(sens[key])
-        return logsimple, traces, sensitives
+    def get_multiset_log_n(self,alist):
+        mult_log = []
+        for s in alist:
+            mult_log.append(Multiset(s))
+        return mult_log
 
     def suppression(self, violating, frequent):
         sup = []
@@ -300,7 +214,30 @@ class ELReps():
             logsimple[key]['trace'] = list_trace
         return logsimple
 
-    def createEventLog(self, simplifiedlog, spectime):
+    def create_tuple(self,trace,trace_attributes,life_cycle):
+        life_cycle_prefix = ['lifecycle:transition']
+        trace_tuple = []
+        life_cycle_value = ''
+        for event_index, event in enumerate(trace):
+            # basis for tuple of (event,time)
+            simple_event = [[], []]
+            simple_attr_temp = []
+            for key, value in event.items():
+                if key in trace_attributes:
+                    simple_attr_temp.append(value)
+                if key in life_cycle_prefix:
+                    # sample all sensitive values for one trace in sens
+                    life_cycle_value = value
+            if life_cycle_value in life_cycle:
+                if len(simple_attr_temp) < 2:
+                    simple_event[0] = tuple(simple_attr_temp)[0]
+                else:
+                    simple_event[0] = tuple(simple_attr_temp)
+                tu = (simple_event[0])
+                trace_tuple.append(tu)
+        return trace_tuple
+
+    def createEventLog(self, simplifiedlog, spectime, trace_attributes,life_cycle):
         deleteLog = []
         log = self.log
         d = 0
@@ -314,7 +251,8 @@ class ELReps():
             k = 0
             j = 0
             while j < len(log[i]) and k < len(trace):
-                if trace[k][0] == log[i][j]["concept:name"]:
+                trace_tuple = self.create_tuple(log[i], trace_attributes,life_cycle)
+                if trace_tuple[j] in [el[0] for el in trace]:
                     if spectime == "seconds":
                         if j == 0:
                             starttime = log[i][j]['time:timestamp']
@@ -545,21 +483,11 @@ class ELReps():
 
                     j += 1
                 else:
-                    f = open("testss.txt", "a")
-                    f.write(str(i) + "," + str(j))
-                    f.write(str(simplifiedlog[caseId]['trace'][j][0]))
-                    f.write('\n')
-                    f.close()
                     del_list.append(log[i][j])
                     # log[i]._list.remove(log[i][j])
                     d += 1
                     j += 1
             for x in del_list:
-                f = open("testss.txt", "a")
-                f.write(str(x))
-                f.write('\n')
-                f.close()
-
                 log[i]._list.remove(x)
                 # d += 1
                 # x += 1
