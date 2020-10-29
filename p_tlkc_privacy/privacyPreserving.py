@@ -18,7 +18,7 @@ class privacyPreserving(object):
         self.log = xes_importer_factory.apply(log)
         self.log_name = log_name
 
-    def apply(self, T, L, K, C, K2, sensitive, cont, bk_type, trace_attributes, life_cycle, time_based, directory, file_path):
+    def apply(self, T, L, K, C, K2, sensitive, cont, bk_type, trace_attributes, life_cycle, all_life_cycle,time_based, directory, file_path):
 
         if time_based:
             dict1 = {
@@ -46,10 +46,12 @@ class privacyPreserving(object):
                                 for t in T:
                                     log2[t] = self.log
                                 log_set, frequent_length_set, violating_length_set, d_set, d_l_set, dict2 = \
-                                    anonymizer.set_type(self.log, log2, sensitive, cont, l, k, c, k2, dict1, T, trace_attributes, life_cycle, time_based, bk_type)
+                                    anonymizer.set_type(self.log, log2, sensitive, cont, l, k, c, k2, dict1, T, trace_attributes, life_cycle, all_life_cycle,time_based, bk_type)
                                 dict1 = dict2
                                 for t in T:
                                     self.add_privacy_metadata(log_set[t])
+                                    #naming for experiments
+                                    privacy_aware_log_path = privacy_aware_log_path[:-4]+"_"+str(t)+"_"+str(l)+"_"+str(k)+"_"+str(c)+"_"+str(k2)+"_"+bk_type+".xes"
                                     xes_exporter.export_log(log_set[t],privacy_aware_log_path)
                                     print(file_path + " has been exported!")
                             elif bk_type == "multiset":
@@ -58,18 +60,24 @@ class privacyPreserving(object):
                                 for t in T:
                                     log2[t] = self.log
                                 log_set_count, frequent_length_set_count, violating_length_set_count, d_set_count, d_l_set_count, dict2 = \
-                                    anonymizer.multiset_type(self.log, log2, sensitive, cont, l, k, c, k2, dict1, T, trace_attributes, life_cycle,time_based,bk_type)
+                                    anonymizer.multiset_type(self.log, log2, sensitive, cont, l, k, c, k2, dict1, T, trace_attributes, life_cycle,all_life_cycle,time_based,bk_type)
                                 dict1 = dict2
                                 for t in T:
                                     self.add_privacy_metadata(log_set_count[t])
+                                    # naming for experiments
+                                    privacy_aware_log_path = privacy_aware_log_path[:-4] + "_" + str(t) + "_" + str(
+                                        l) + "_" + str(k) + "_" + str(c) + "_" + str(k2) + "_" + bk_type + ".xes"
                                     xes_exporter.export_log(log_set_count[t], privacy_aware_log_path)
                                     print(file_path + " has been exported!")
                             elif bk_type == "sequence" and time_based:
                                 print("l = " + str(l) + " type = " + str(bk_type) + " is running...")
                                 for t in T:
                                     log_time, frequent_length_time, violating_length_time, d_time, d_l_time, dict2 = \
-                                        anonymizer.sequence_time_type(self.log, sensitive, cont, t, l, k, c, k2, dict1,trace_attributes, life_cycle,time_based,bk_type)
+                                        anonymizer.sequence_time_type(self.log, sensitive, cont, t, l, k, c, k2, dict1,trace_attributes, life_cycle,all_life_cycle,time_based,bk_type)
                                     self.add_privacy_metadata(log_time)
+                                    # naming for experiments
+                                    privacy_aware_log_path = privacy_aware_log_path[:-4] + "_" + str(t) + "_" + str(
+                                        l) + "_" + str(k) + "_" + str(c) + "_" + str(k2) + "_" + bk_type + ".xes"
                                     xes_exporter.export_log(log_time, privacy_aware_log_path)
                                     print(file_path + " has been exported!")
                                     dict1 = dict2
@@ -79,10 +87,13 @@ class privacyPreserving(object):
                                 for t in T:
                                     log2[t] = self.log
                                 log_seq_count, frequent_length_seq_count, violating_length_seq_count, d_seq_count, d_l_seq_count, dict2 = \
-                                    anonymizer.sequence_type(self.log, log2, sensitive, cont, l, k, c, k2, dict1, T, trace_attributes, life_cycle,time_based,bk_type)
+                                    anonymizer.sequence_type(self.log, log2, sensitive, cont, l, k, c, k2, dict1, T, trace_attributes, life_cycle,all_life_cycle,time_based,bk_type)
                                 dict1 = dict2
                                 for t in T:
                                     self.add_privacy_metadata(log_seq_count[t])
+                                    # naming for experiments
+                                    privacy_aware_log_path = privacy_aware_log_path[:-4] + "_" + str(t) + "_" + str(
+                                        l) + "_" + str(k) + "_" + str(c) + "_" + str(k2) + "_" + bk_type + ".xes"
                                     xes_exporter.export_log(log_seq_count[t], privacy_aware_log_path)
                                     print(file_path + " has been exported!")
                         except Exception as e:

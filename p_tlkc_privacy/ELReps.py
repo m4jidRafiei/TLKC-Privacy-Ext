@@ -11,95 +11,91 @@ class ELReps():
         log = sorting.sort_timestamp(log)
         self.log = log
 
-    def create_simple_log(self, bk_type, trace_attributes, life_cycle, sensitive_attributes, time_based, **keyword_param): #time_accuracy
+    def create_simple_log(self, bk_type, trace_attributes, life_cycle, all_life_cycle, sensitive_attributes, time_based,time_accuracy): #time_accuracy
         #If time_based is true then the background knowledge type have to be sequence
         time_prefix = ['time:timestamp']
         life_cycle_prefix = ['lifecycle:transition']
         logsimple = {}
         traces = []
         sensitives = {el: [] for el in sensitive_attributes}
+
         for case_index, case in enumerate(self.log):
-            # as cache for each case
-            sens = {}
-            trace = []
-            bol = True
-            trace_temp = []
-            for event_index, event in enumerate(case):
-                # basis for tuple of (event,time)
-                simple_event = [[], []]
-                simple_attr_temp = []
-                life_cycle_value = ''
-                for key, value in event.items():
-                    # Filtering out the needed attributes and create new log out of it
-                    # simplify timestamp to timeintervalls as precise as spectime
-                    # pair[1] = time
-                    if bk_type == 'sequence' and time_based and key in time_prefix:
-                        if event_index == 0:
-                            starttime = value
-                            time = 0
-                        else:
-                            if keyword_param['time_accuracy'] == "seconds":
-                                time = (value - starttime).total_seconds()
-                            elif keyword_param['time_accuracy'] == "minutes":
-                                time = (value.replace(second=0, microsecond=0)
-                                           - starttime.replace(second=0, microsecond=0)).total_seconds() / 60
-                            elif keyword_param['time_accuracy'] == "hours":
-                                time = (value.replace(minute=0, second=0, microsecond=0)
-                                           - starttime.replace(minute=0, second=0, microsecond=0)).total_seconds() / 360
-                            elif keyword_param['time_accuracy'] == "days":
-                                time = (value.replace(hour=0, minute=0, second=0, microsecond=0)
-                                           - starttime.replace(hour=0, minute=0, second=0,
-                                                               microsecond=0)).total_seconds() \
-                                          / 8640
-                    # pair[0] = event
-                    if key in trace_attributes:
-                        simple_attr_temp.append(value)
-                    if key in sensitive_attributes:
-                        # sample all sensitive values for one trace in sens
-                        sens[key] = value
-                    if key in life_cycle_prefix:
-                        # sample all sensitive values for one trace in sens
-                        life_cycle_value = value
-                if life_cycle_value in life_cycle:
-                    if len(simple_attr_temp) < 2:
-                        simple_event[0] = tuple(simple_attr_temp)[0]
-                    else:
-                        simple_event[0] = tuple(simple_attr_temp)
+            trace, sens = self.create_tuple(case,trace_attributes,life_cycle,all_life_cycle,life_cycle_prefix,time_prefix,bk_type,time_based,sensitive_attributes,time_accuracy)
 
-                    if bk_type == 'sequence' and time_based:
-                        simple_event[1] = time
-                        tu = (simple_event[0], simple_event[1])
-                        trace.append(tu)
-
-                        # checking if timestamps are the same, then deleting
-                        # if len(trace) == 0:
-                        #     tu = (simple_event[0], simple_event[1])
-                        #     # create trace with pairs (event,time)
-                        #     trace.append(tu)
-                        # # just adding pair if the timestamp is bigger then the one before
-                        # elif simple_event[1] < trace[len(trace) - 1][1]:  #simple_event[0] == trace[len(trace) - 1][0] and simple_event[1] == trace[len(trace) - 1][1]
-                        #     bol = False
-                        #     break
-                        # else:
-                        #     tu = (simple_event[0], simple_event[1])
-                        #     trace.append(tu)
-
-                    elif bk_type == 'multiset':
-                        tu = (simple_event[0])
-                        trace_temp.append(simple_event[0])
-                        trace.append(tu)
-
-                    elif bk_type == 'sequence': #or bk_type == 'multiset':
-                        count_event = trace_temp.count(simple_event[0])
-                        simple_event[1] = count_event + 1
-                        tu = (simple_event[0], simple_event[1])
-                        trace_temp.append(simple_event[0])
-                        trace.append(tu)
-
-                    elif bk_type == 'set':
-                        simple_event[1] = 0
-                        tu = (simple_event[0], simple_event[1])
-                        trace.append(tu)
+        # for case_index, case in enumerate(self.log):
+        #     # as cache for each case
+        #     sens = {}
+        #     trace = []
+        #     trace_temp = []
+        #     for event_index, event in enumerate(case):
+        #         # basis for tuple of (event,time)
+        #         simple_event = [[], []]
+        #         simple_attr_temp = []
+        #         life_cycle_value = ''
+        #         event_dict = {}
+        #         for key, value in event.items():
+        #             # Filtering out the needed attributes and create new log out of it
+        #             # simplify timestamp to timeintervalls as precise as spectime
+        #             # pair[1] = time
+        #             if bk_type == 'sequence' and time_based and key in time_prefix:
+        #                 if event_index == 0:
+        #                     starttime = value
+        #                     time = 0
+        #                 else:
+        #                     if keyword_param['time_accuracy'] == "seconds":
+        #                         time = (value - starttime).total_seconds()
+        #                     elif keyword_param['time_accuracy'] == "minutes":
+        #                         time = (value.replace(second=0, microsecond=0)
+        #                                    - starttime.replace(second=0, microsecond=0)).total_seconds() / 60
+        #                     elif keyword_param['time_accuracy'] == "hours":
+        #                         time = (value.replace(minute=0, second=0, microsecond=0)
+        #                                    - starttime.replace(minute=0, second=0, microsecond=0)).total_seconds() / 360
+        #                     elif keyword_param['time_accuracy'] == "days":
+        #                         time = (value.replace(hour=0, minute=0, second=0, microsecond=0)
+        #                                    - starttime.replace(hour=0, minute=0, second=0,
+        #                                                        microsecond=0)).total_seconds() \
+        #                                   / 8640
+        #             # pair[0] = event
+        #             if key in trace_attributes:
+        #                 event_dict[key]=value
+        #                 # simple_attr_temp.append(event_dict)
+        #             if key in sensitive_attributes:
+        #                 # sample all sensitive values for one trace in sens
+        #                 sens[key] = value
+        #             if key in life_cycle_prefix:
+        #                 # sample all sensitive values for one trace in sens
+        #                 life_cycle_value = value
+        #         if all_life_cycle or (life_cycle_value in life_cycle):
+        #             if len(event_dict) < 2:
+        #                 simple_event[0] = list(event_dict.values())[0]
+        #                 # simple_event[0] = tuple(simple_attr_temp)[0]
+        #             else:
+        #                 for att in trace_attributes:
+        #                     if att in event_dict:
+        #                         simple_attr_temp.append(event_dict[att])
+        #                 simple_event[0] = tuple(simple_attr_temp)
+        #
+        #             if bk_type == 'sequence' and time_based:
+        #                 simple_event[1] = time
+        #                 tu = (simple_event[0], simple_event[1])
+        #                 trace.append(tu)
+        #
+        #             elif bk_type == 'multiset':
+        #                 tu = (simple_event[0])
+        #                 trace_temp.append(simple_event[0])
+        #                 trace.append(tu)
+        #
+        #             elif bk_type == 'sequence': #or bk_type == 'multiset':
+        #                 count_event = trace_temp.count(simple_event[0])
+        #                 simple_event[1] = count_event + 1
+        #                 tu = (simple_event[0], simple_event[1])
+        #                 trace_temp.append(simple_event[0])
+        #                 trace.append(tu)
+        #
+        #             elif bk_type == 'set':
+        #                 simple_event[1] = 0
+        #                 tu = (simple_event[0], simple_event[1])
+        #                 trace.append(tu)
 
             # create simplified log containing new trace (event,time), sensitive attributes
             # if bk_type == "mult" or bk_type == "set":
@@ -214,30 +210,115 @@ class ELReps():
             logsimple[key]['trace'] = list_trace
         return logsimple
 
-    def create_tuple(self,trace,trace_attributes,life_cycle):
-        life_cycle_prefix = ['lifecycle:transition']
-        trace_tuple = []
-        life_cycle_value = ''
-        for event_index, event in enumerate(trace):
+    # def create_tuple(self,trace,trace_attributes,life_cycle,all_life_cycle):
+    #     life_cycle_prefix = ['lifecycle:transition']
+    #     trace_tuple = []
+    #     life_cycle_value = ''
+    #     for event_index, event in enumerate(trace):
+    #         # basis for tuple of (event,time)
+    #         simple_event = [[], []]
+    #         simple_attr_temp = []
+    #         event_dict = {}
+    #         for key, value in event.items():
+    #             if key in trace_attributes:
+    #                 event_dict[key] = value
+    #                 # simple_attr_temp.append(value)
+    #             if key in life_cycle_prefix:
+    #                 # sample all sensitive values for one trace in sens
+    #                 life_cycle_value = value
+    #         if all_life_cycle or (life_cycle_value in life_cycle):
+    #             if len(event_dict) < 2:
+    #                 simple_event[0] = list(event_dict.values())[0]
+    #                 # simple_event[0] = tuple(simple_attr_temp)[0]
+    #             else:
+    #                 for att in trace_attributes:
+    #                     if att in event_dict:
+    #                         simple_attr_temp.append(event_dict[att])
+    #                 simple_event[0] = tuple(simple_attr_temp)
+    #             tu = (simple_event[0])
+    #             trace_tuple.append(tu)
+    #             # if len(simple_attr_temp) < 2:
+    #             #     simple_event[0] = tuple(simple_attr_temp)[0]
+    #             # else:
+    #             #     simple_event[0] = tuple(simple_attr_temp)
+    #             # tu = (simple_event[0])
+    #             # trace_tuple.append(tu)
+    #     return trace_tuple
+    def create_tuple(self, case, trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix, time_prefix, bk_type,time_based,sensitive_attributes,time_accuracy):
+        sens = {}
+        trace = []
+        trace_temp = []
+        for event_index, event in enumerate(case):
             # basis for tuple of (event,time)
             simple_event = [[], []]
             simple_attr_temp = []
+            life_cycle_value = ''
+            event_dict = {}
             for key, value in event.items():
+                # Filtering out the needed attributes and create new log out of it
+                # simplify timestamp to timeintervalls as precise as spectime
+                # pair[1] = time
+                if bk_type == 'sequence' and time_based and key in time_prefix:
+                    if event_index == 0:
+                        starttime = value
+                        time = 0
+                    else:
+                        if time_accuracy == "seconds":
+                            time = (value - starttime).total_seconds()
+                        elif time_accuracy == "minutes":
+                            time = (value.replace(second=0, microsecond=0)
+                                    - starttime.replace(second=0, microsecond=0)).total_seconds() / 60
+                        elif time_accuracy == "hours":
+                            time = (value.replace(minute=0, second=0, microsecond=0)
+                                    - starttime.replace(minute=0, second=0, microsecond=0)).total_seconds() / 360
+                        elif time_accuracy == "days":
+                            time = (value.replace(hour=0, minute=0, second=0, microsecond=0)
+                                    - starttime.replace(hour=0, minute=0, second=0,
+                                                        microsecond=0)).total_seconds() \
+                                   / 8640
+                # pair[0] = event
                 if key in trace_attributes:
-                    simple_attr_temp.append(value)
+                    event_dict[key] = value
+                    # simple_attr_temp.append(event_dict)
+                if key in sensitive_attributes:
+                    # sample all sensitive values for one trace in sens
+                    sens[key] = value
                 if key in life_cycle_prefix:
                     # sample all sensitive values for one trace in sens
                     life_cycle_value = value
-            if life_cycle_value in life_cycle:
-                if len(simple_attr_temp) < 2:
-                    simple_event[0] = tuple(simple_attr_temp)[0]
+            if all_life_cycle or (life_cycle_value in life_cycle):
+                if len(event_dict) < 2:
+                    simple_event[0] = list(event_dict.values())[0]
+                    # simple_event[0] = tuple(simple_attr_temp)[0]
                 else:
+                    for att in trace_attributes:
+                        if att in event_dict:
+                            simple_attr_temp.append(event_dict[att])
                     simple_event[0] = tuple(simple_attr_temp)
-                tu = (simple_event[0])
-                trace_tuple.append(tu)
-        return trace_tuple
+                if bk_type == 'sequence' and time_based:
+                    simple_event[1] = time
+                    tu = (simple_event[0], simple_event[1])
+                    trace.append(tu)
+                elif bk_type == 'multiset':
+                    tu = (simple_event[0])
+                    trace_temp.append(simple_event[0])
+                    trace.append(tu)
+                elif bk_type == 'sequence':  # or bk_type == 'multiset':
+                    count_event = trace_temp.count(simple_event[0])
+                    simple_event[1] = count_event + 1
+                    tu = (simple_event[0], simple_event[1])
+                    trace_temp.append(simple_event[0])
+                    trace.append(tu)
+                elif bk_type == 'set':
+                    simple_event[1] = 0
+                    tu = (simple_event[0], simple_event[1])
+                    trace.append(tu)
 
-    def createEventLog(self, simplifiedlog, spectime, trace_attributes,life_cycle):
+        return trace, sens
+
+    def createEventLog(self, simplifiedlog, spectime, trace_attributes,life_cycle,all_life_cycle,bk_type,time_based, sensitive_attributes, time_accuracy):
+        time_prefix = ['time:timestamp']
+        life_cycle_prefix = ['lifecycle:transition']
         deleteLog = []
         log = self.log
         d = 0
@@ -250,11 +331,16 @@ class ELReps():
             trace = simplifiedlog[caseId]["trace"]
             k = 0
             j = 0
-            while j < len(log[i]) and k < len(trace):
-                trace_tuple = self.create_tuple(log[i], trace_attributes,life_cycle)
-                if trace_tuple[j] in [el[0] for el in trace]:
+            del_list = []
+            trace_tuple, sens = self.create_tuple(log[i], trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix,
+                                            time_prefix, bk_type, time_based, sensitive_attributes, time_accuracy)
+            # trace_tuple = self.create_tuple(log[i], trace_attributes, life_cycle,all_life_cycle)
+            starttime = 0
+            while j < len(log[i]): #and k < len(trace):
+                # if trace_tuple[j] in [el[0] for el in trace]:
+                if trace_tuple[j] in trace:
                     if spectime == "seconds":
-                        if j == 0:
+                        if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
                             log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
                                                                             hour=0, minute=0, second=0)
@@ -279,9 +365,8 @@ class ELReps():
                                                                                 month=1 + month,
                                                                                 day=1 + days, hour=hours,
                                                                                 minute=minutes, second=sectim)
-
                     elif spectime == "minutes":
-                        if j == 0:
+                        if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
                             log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
                                                                             hour=0, minute=0,second=0)
@@ -306,7 +391,7 @@ class ELReps():
                                                                                 day=1 + days, hour=hours,
                                                                                 minute=minutes, second=0)
                     elif spectime == "hours":
-                        if j == 0:
+                        if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
                             log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
                                                                             hour=0,minute=0,second=0)
@@ -328,7 +413,7 @@ class ELReps():
                                                                                 day=1 + days, hour=hours, minute=0,
                                                                                 second=0)
                     elif spectime == "days":
-                        if j == 0:
+                        if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
                             log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
                                                                             hour=0,minute=0,second=0)
@@ -352,21 +437,34 @@ class ELReps():
                     k += 1
                     j += 1
                 else:
-                    log[i]._list.remove(log[i][j])
-                    d += 1
-            if j < len(log[i]):
-                for k in range(len(log[i])-1, j - 1 ,-1):
-                    log[i]._list.remove(log[i][k])
+                    del_list.append(log[i][j])
+                    # log[i]._list.remove(log[i][j])
                     d += 1
                     j += 1
+                    k += 1
+            for x in del_list:
+                log[i]._list.remove(x)
+                # d += 1
+                # x += 1
             if len(log[i]) == 0:
                 deleteLog.append(i)
+            #     else:
+            #         log[i]._list.remove(log[i][j])
+            #         d += 1
+            # if j < len(log[i]):
+            #     for k in range(len(log[i])-1, j - 1 ,-1):
+            #         log[i]._list.remove(log[i][k])
+            #         d += 1
+            #         j += 1
+            # if len(log[i]) == 0:
+            #     deleteLog.append(i)
         for i in sorted(deleteLog, reverse=True):
             log._list.remove(log[i])
             d_l += 1
         log2 = EventLog([trace for trace in log])
         return log2, d, d_l
 
+    #not used...............
     def suppression2(self, sup, simplifiedlog, spectime):
         deleteLog = []
         log_del = self.log
