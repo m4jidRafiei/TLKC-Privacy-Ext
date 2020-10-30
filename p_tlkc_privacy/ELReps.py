@@ -8,7 +8,7 @@ from multiset import Multiset
 class ELReps():
 
     def __init__(self, log):
-        log = sorting.sort_timestamp(log)
+        # log = sorting.sort_timestamp(log)
         self.log = log
 
     def create_simple_log(self, bk_type, trace_attributes, life_cycle, all_life_cycle, sensitive_attributes, time_based,time_accuracy): #time_accuracy
@@ -130,7 +130,7 @@ class ELReps():
             mult_log.append(Multiset(s))
         return mult_log
 
-    def suppression(self, violating, frequent):
+    def suppression(self, violating, frequent, relative_freq):
         sup = []
         X1 = []
         for v in violating + frequent:
@@ -141,10 +141,14 @@ class ELReps():
                     X1.append(sub)
         X1 = list(set(X1))
         score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
+
+        #update scores based on relative frequencies
+        updated_scores = self.update_score_freq(score_res,relative_freq)
+
         # while PG table is not empty do
-        while len(score_res) > 0:
+        while len(violating) > 0:
             # 4: select a pair w that has the highest Score to suppress;
-            w = max(score_res.items(), key=operator.itemgetter(1))[0]
+            w = max(updated_scores.items(), key=operator.itemgetter(1))[0]
             # 5: delete all MVS and MFS containing w from MVS -tree and MFS - tree;
             list_mvs = mvsEl[w]
             for l in list_mvs:
@@ -165,12 +169,30 @@ class ELReps():
                     for sub in v:
                         X1.append(sub)
             X1 = list(set(X1))
-            # 7: remove w from PG Table;
-            score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
+            if len(violating) > 0:
+                # 7: remove w from PG Table;
+                score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
+                # update scores based on relative frequencies
+                updated_scores = self.update_score_freq(score_res, relative_freq)
+
             # 8: add w to Sup;
             sup.append(w)
         # 9: end
         return sup
+
+    def update_score_freq(self,scores,relative_freq):
+        updated_with_freq = {}
+        for key,value in scores.items():
+            updated_with_freq[key] = value + (1 - relative_freq[key])
+        return updated_with_freq
+
+    def get_freq_list(self,list,relative_freq):
+        flat_list = [item for sublist in list for item in sublist]
+        flat_list_set = set(flat_list)
+        sum_freq = 0
+        for item in flat_list_set:
+            sum_freq += relative_freq[item]
+        return sum_freq
 
     def score(self,violating, frequent, X1):
         priv = {v: 0 for v in X1}
@@ -195,9 +217,16 @@ class ELReps():
                     mfsEle[el].append(f)
         score = {el: 0 for el in X1}
         for el in X1:
-            score[el] = priv[el] / (ut[el] + 1)
+            score_val = priv[el] / (ut[el] + 1)
+
+            # #normalized score
+            # score_norm = score_val / len(violating)
+            # score[el] = score_norm
+
+            score[el] = score_val
             if score[el] == 0:
                 del score[el]
+
         return score, mvsEle, mfsEle
 
     def suppressT(self,logsimple, sup):
@@ -461,7 +490,7 @@ class ELReps():
         for i in sorted(deleteLog, reverse=True):
             log._list.remove(log[i])
             d_l += 1
-        log2 = EventLog([trace for trace in log])
+        log2 = EventLog([trace for trace in log], classifiers = self.log.classifiers)
         return log2, d, d_l
 
     #not used...............
@@ -637,3 +666,14 @@ class ELReps():
         if days != 0:
             days -= 1
         return month, days
+
+    def get_relative_freq(self, list_traces):
+        flat_list = [item for sublist in list_traces for item in sublist]
+        flat_list_set = set(flat_list)
+        flat_list_dict = {item: 0 for item in flat_list_set}
+        tuple_list = map(tuple, flat_list)
+        c = Counter(tuple_list)
+        for items in c.items():
+            freq = items[1] / len(flat_list)
+            flat_list_dict[items[0]] = freq
+        return flat_list_dict

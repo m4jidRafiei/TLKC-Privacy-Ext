@@ -47,6 +47,7 @@ class Anonymizer:
         mfs = MFS.MFS()
         repres = ELReps.ELReps(log)
         logsimple_set, T_set, sensitives_set = repres.create_simple_log(bk_type, trace_attributes, life_cycle, all_life_cycle,sensitive, time_based,time_accuracy='seconds')
+        relative_freq = repres.get_relative_freq(T_set)
 
         frequent_set = mfs.frequent_set_miner(T_set, k2)
         mvs = MVS.MVS(T_set, logsimple_set, sensitive, cont, sensitives_set, bk_type, time_based, dict_safe=dict1)
@@ -54,7 +55,7 @@ class Anonymizer:
         violating_set,dict1 = mvs.mvs(l, k, c,k2)
         frequent_length_set = len(frequent_set.copy())
         violating_length_set = len(violating_set.copy())
-        sup_set = repres.suppression(violating_set, frequent_set)
+        sup_set = repres.suppression(violating_set, frequent_set,relative_freq)
 
         T_set = repres.suppressT(logsimple_set, sup_set)
 

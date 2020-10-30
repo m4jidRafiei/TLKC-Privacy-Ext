@@ -33,7 +33,7 @@ class privacyPreserving(object):
         now =datetime.now()
         date_time = now.strftime(" %m-%d-%y %H-%M-%S ")
         fixed_name = "TLKC" + date_time + self.log_name + " "
-        privacy_aware_log_path = os.path.join(directory,file_path)
+        privacy_aware_log_dir = os.path.join(directory,file_path)
         for l in L:
             print("l = " + str(l) + " is running...")
             for k2 in K2:
@@ -51,8 +51,10 @@ class privacyPreserving(object):
                                 for t in T:
                                     self.add_privacy_metadata(log_set[t])
                                     #naming for experiments
-                                    privacy_aware_log_path = privacy_aware_log_path[:-4]+"_"+str(t)+"_"+str(l)+"_"+str(k)+"_"+str(c)+"_"+str(k2)+"_"+bk_type+".xes"
-                                    xes_exporter.export_log(log_set[t],privacy_aware_log_path)
+                                    n_file_path = file_path[:-4]+"_"+str(t)+"_"+str(l)+"_"+str(k)+"_"+str(c)+"_"+str(k2)+"_"+bk_type+".xes"
+                                    privacy_aware_log_dir = os.path.join(directory, n_file_path)
+                                    #------
+                                    xes_exporter.export_log(log_set[t],privacy_aware_log_dir)
                                     print(file_path + " has been exported!")
                             elif bk_type == "multiset":
                                 print("l = " + str(l) + " type = " + str(bk_type) + " is running...")
@@ -65,9 +67,11 @@ class privacyPreserving(object):
                                 for t in T:
                                     self.add_privacy_metadata(log_set_count[t])
                                     # naming for experiments
-                                    privacy_aware_log_path = privacy_aware_log_path[:-4] + "_" + str(t) + "_" + str(
-                                        l) + "_" + str(k) + "_" + str(c) + "_" + str(k2) + "_" + bk_type + ".xes"
-                                    xes_exporter.export_log(log_set_count[t], privacy_aware_log_path)
+                                    n_file_path = file_path[:-4] + "_" + str(t) + "_" + str(l) + "_" + str(k) + "_" + str(
+                                        c) + "_" + str(k2) + "_" + bk_type + ".xes"
+                                    privacy_aware_log_dir = os.path.join(directory, n_file_path)
+                                    # ------
+                                    xes_exporter.export_log(log_set_count[t], privacy_aware_log_dir)
                                     print(file_path + " has been exported!")
                             elif bk_type == "sequence" and time_based:
                                 print("l = " + str(l) + " type = " + str(bk_type) + " is running...")
@@ -76,9 +80,11 @@ class privacyPreserving(object):
                                         anonymizer.sequence_time_type(self.log, sensitive, cont, t, l, k, c, k2, dict1,trace_attributes, life_cycle,all_life_cycle,time_based,bk_type)
                                     self.add_privacy_metadata(log_time)
                                     # naming for experiments
-                                    privacy_aware_log_path = privacy_aware_log_path[:-4] + "_" + str(t) + "_" + str(
-                                        l) + "_" + str(k) + "_" + str(c) + "_" + str(k2) + "_" + bk_type + ".xes"
-                                    xes_exporter.export_log(log_time, privacy_aware_log_path)
+                                    n_file_path = file_path[:-4] + "_" + str(t) + "_" + str(l) + "_" + str(k) + "_" + str(
+                                        c) + "_" + str(k2) + "_" + bk_type + ".xes"
+                                    privacy_aware_log_dir = os.path.join(directory, n_file_path)
+                                    # ------
+                                    xes_exporter.export_log(log_set_count[t], privacy_aware_log_dir)
                                     print(file_path + " has been exported!")
                                     dict1 = dict2
                             elif bk_type == "sequence":
@@ -92,14 +98,16 @@ class privacyPreserving(object):
                                 for t in T:
                                     self.add_privacy_metadata(log_seq_count[t])
                                     # naming for experiments
-                                    privacy_aware_log_path = privacy_aware_log_path[:-4] + "_" + str(t) + "_" + str(
-                                        l) + "_" + str(k) + "_" + str(c) + "_" + str(k2) + "_" + bk_type + ".xes"
-                                    xes_exporter.export_log(log_seq_count[t], privacy_aware_log_path)
+                                    n_file_path = file_path[:-4] + "_" + str(t) + "_" + str(l) + "_" + str(k) + "_" + str(
+                                        c) + "_" + str(k2) + "_" + bk_type + ".xes"
+                                    privacy_aware_log_dir = os.path.join(directory, n_file_path)
+                                    # ------
+                                    xes_exporter.export_log(log_set_count[t], privacy_aware_log_dir)
                                     print(file_path + " has been exported!")
                         except Exception as e:
                             print(e)
 
-        return privacy_aware_log_path
+        return privacy_aware_log_dir
 
     def add_privacy_metadata(self,log):
         prefix = 'privacy:'

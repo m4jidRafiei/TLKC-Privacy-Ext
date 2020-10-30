@@ -3,10 +3,10 @@ import sys
 import os
 
 # event_log = "Sepsis Cases - Event Log.xes"
-event_log = "Sepsis Cases - Event Log.xes"
+event_log = "BPI_Challenge_2012.xes"
 # event_log = "running_example.xes"
 
-L = [5]
+L = [2]
 C = [1]
 K = [20]
 K2 = [0.8]
@@ -14,10 +14,10 @@ K2 = [0.8]
 sensitive = []
 T = ["minutes"]
 cont = []
-bk_type = "sequence" #set, multiset, sequence
+bk_type = "set" #set, multiset, sequence
 time_based = False
 #'lifecycle:transition'
-trace_attributes = ['concept:name']
+trace_attributes = ['concept:name', 'lifecycle:transition']
 #these life cycles are applied only when all_lif_cycle = False
 life_cycle = ['complete', '', 'COMPLETE']
 #when life cycle is in trace attributes then all_life_cycle has to be True
