@@ -20,5 +20,5 @@ for k in K:
             count += dict["count"]
     for delete in to_filter:
         log = variants_filter.apply(log, delete,parameters={"positive": False})
-    xes_exporter.export_log(log, "xes/baseline" + "_" + str(k) + "-" + "Annonymity" + ".xes")
-    print("xes/baseline" + "_" + str(k) + "-" + "Annonymity" + ".xes" + " has been exported!")
+    xes_exporter.export_log(log, "baseline" + "_" + str(k) + "-" + "Annonymity" + ".xes")
+    print("baseline" + "_" + str(k) + "-" + "Annonymity" + ".xes" + " has been exported!")

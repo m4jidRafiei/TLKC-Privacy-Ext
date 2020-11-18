@@ -4,6 +4,7 @@ from pm4py.objects.log.log import Trace, EventLog
 from pm4py.objects.log.util import sorting
 from collections import Counter
 from multiset import Multiset
+import copy
 
 class ELReps():
 
@@ -11,8 +12,7 @@ class ELReps():
         # log = sorting.sort_timestamp(log)
         self.log = log
 
-    def create_simple_log(self, bk_type, trace_attributes, life_cycle, all_life_cycle, sensitive_attributes, time_based,time_accuracy): #time_accuracy
-        #If time_based is true then the background knowledge type have to be sequence
+    def create_simple_log(self, bk_type, trace_attributes, life_cycle, all_life_cycle, sensitive_attributes,time_accuracy): #time_accuracy
         time_prefix = ['time:timestamp']
         life_cycle_prefix = ['lifecycle:transition']
         logsimple = {}
@@ -20,92 +20,7 @@ class ELReps():
         sensitives = {el: [] for el in sensitive_attributes}
 
         for case_index, case in enumerate(self.log):
-            trace, sens = self.create_tuple(case,trace_attributes,life_cycle,all_life_cycle,life_cycle_prefix,time_prefix,bk_type,time_based,sensitive_attributes,time_accuracy)
-
-        # for case_index, case in enumerate(self.log):
-        #     # as cache for each case
-        #     sens = {}
-        #     trace = []
-        #     trace_temp = []
-        #     for event_index, event in enumerate(case):
-        #         # basis for tuple of (event,time)
-        #         simple_event = [[], []]
-        #         simple_attr_temp = []
-        #         life_cycle_value = ''
-        #         event_dict = {}
-        #         for key, value in event.items():
-        #             # Filtering out the needed attributes and create new log out of it
-        #             # simplify timestamp to timeintervalls as precise as spectime
-        #             # pair[1] = time
-        #             if bk_type == 'sequence' and time_based and key in time_prefix:
-        #                 if event_index == 0:
-        #                     starttime = value
-        #                     time = 0
-        #                 else:
-        #                     if keyword_param['time_accuracy'] == "seconds":
-        #                         time = (value - starttime).total_seconds()
-        #                     elif keyword_param['time_accuracy'] == "minutes":
-        #                         time = (value.replace(second=0, microsecond=0)
-        #                                    - starttime.replace(second=0, microsecond=0)).total_seconds() / 60
-        #                     elif keyword_param['time_accuracy'] == "hours":
-        #                         time = (value.replace(minute=0, second=0, microsecond=0)
-        #                                    - starttime.replace(minute=0, second=0, microsecond=0)).total_seconds() / 360
-        #                     elif keyword_param['time_accuracy'] == "days":
-        #                         time = (value.replace(hour=0, minute=0, second=0, microsecond=0)
-        #                                    - starttime.replace(hour=0, minute=0, second=0,
-        #                                                        microsecond=0)).total_seconds() \
-        #                                   / 8640
-        #             # pair[0] = event
-        #             if key in trace_attributes:
-        #                 event_dict[key]=value
-        #                 # simple_attr_temp.append(event_dict)
-        #             if key in sensitive_attributes:
-        #                 # sample all sensitive values for one trace in sens
-        #                 sens[key] = value
-        #             if key in life_cycle_prefix:
-        #                 # sample all sensitive values for one trace in sens
-        #                 life_cycle_value = value
-        #         if all_life_cycle or (life_cycle_value in life_cycle):
-        #             if len(event_dict) < 2:
-        #                 simple_event[0] = list(event_dict.values())[0]
-        #                 # simple_event[0] = tuple(simple_attr_temp)[0]
-        #             else:
-        #                 for att in trace_attributes:
-        #                     if att in event_dict:
-        #                         simple_attr_temp.append(event_dict[att])
-        #                 simple_event[0] = tuple(simple_attr_temp)
-        #
-        #             if bk_type == 'sequence' and time_based:
-        #                 simple_event[1] = time
-        #                 tu = (simple_event[0], simple_event[1])
-        #                 trace.append(tu)
-        #
-        #             elif bk_type == 'multiset':
-        #                 tu = (simple_event[0])
-        #                 trace_temp.append(simple_event[0])
-        #                 trace.append(tu)
-        #
-        #             elif bk_type == 'sequence': #or bk_type == 'multiset':
-        #                 count_event = trace_temp.count(simple_event[0])
-        #                 simple_event[1] = count_event + 1
-        #                 tu = (simple_event[0], simple_event[1])
-        #                 trace_temp.append(simple_event[0])
-        #                 trace.append(tu)
-        #
-        #             elif bk_type == 'set':
-        #                 simple_event[1] = 0
-        #                 tu = (simple_event[0], simple_event[1])
-        #                 trace.append(tu)
-
-            # create simplified log containing new trace (event,time), sensitive attributes
-            # if bk_type == "mult" or bk_type == "set":
-            #     logsimple[case.attributes["concept:name"]] = {"trace":  sorted(trace), "sensitive": sens}
-            #     traces.append( sorted(trace))
-            # else:
-
-            if bk_type == 'multiset':
-                trace = self.get_multiset_log(trace)
-
+            trace, sens = self.create_trace(case,trace_attributes,life_cycle,all_life_cycle,life_cycle_prefix,time_prefix,bk_type,sensitive_attributes,time_accuracy,False)
             logsimple[case.attributes["concept:name"]] = {"trace":  trace, "sensitive": sens}
             traces.append(trace)
             # sample all values for a specific sensitive attribute (key) in dict
@@ -130,7 +45,7 @@ class ELReps():
             mult_log.append(Multiset(s))
         return mult_log
 
-    def suppression(self, violating, frequent, relative_freq):
+    def suppression(self, violating, frequent, relative_freq,alpha, beta):
         sup = []
         X1 = []
         for v in violating + frequent:
@@ -140,15 +55,13 @@ class ELReps():
                 for sub in v:
                     X1.append(sub)
         X1 = list(set(X1))
-        score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
-
-        #update scores based on relative frequencies
-        updated_scores = self.update_score_freq(score_res,relative_freq)
+        # score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
+        score_res, mvsEl, mfsEl = self.new_score(violating, frequent, X1, relative_freq,alpha, beta)
 
         # while PG table is not empty do
         while len(violating) > 0:
             # 4: select a pair w that has the highest Score to suppress;
-            w = max(updated_scores.items(), key=operator.itemgetter(1))[0]
+            w = max(score_res.items(), key=operator.itemgetter(1))[0]
             # 5: delete all MVS and MFS containing w from MVS -tree and MFS - tree;
             list_mvs = mvsEl[w]
             for l in list_mvs:
@@ -171,20 +84,64 @@ class ELReps():
             X1 = list(set(X1))
             if len(violating) > 0:
                 # 7: remove w from PG Table;
-                score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
-                # update scores based on relative frequencies
-                updated_scores = self.update_score_freq(score_res, relative_freq)
-
+                # score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
+                score_res, mvsEl, mfsEl = self.new_score(violating, frequent, X1, relative_freq,alpha, beta)
             # 8: add w to Sup;
             sup.append(w)
         # 9: end
         return sup
 
-    def update_score_freq(self,scores,relative_freq):
-        updated_with_freq = {}
+    def suppression_new(self, violating, relative_freq, alpha, beta):
+        sup = []
+        X1 = []
+        for v in violating:
+            if isinstance(v[0], str):
+                X1.append(v)
+            else:
+                for sub in v:
+                    X1.append(sub)
+        X1 = list(set(X1))
+        # score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
+        score_res, mvsEl = self.new_score2(violating, X1, relative_freq, alpha, beta)
+
+        # while PG table is not empty do
+        while len(violating) > 0:
+            # 4: select a pair w that has the highest Score to suppress;
+            w = max(score_res.items(), key=operator.itemgetter(1))[0]
+            # 5: delete all MVS and MFS containing w from MVS -tree and MFS - tree;
+            list_mvs = mvsEl[w]
+            for l in list_mvs:
+                if l not in violating:
+                    print(l)
+                    print(violating)
+                else:
+                    violating.remove(l)
+            # 6: update the Score(p) if both w and p are contained in the same MVS or MFS;
+            X1 = []
+            for v in violating:
+                if isinstance(v[0], str):
+                    X1.append(v)
+                else:
+                    for sub in v:
+                        X1.append(sub)
+            X1 = list(set(X1))
+            if len(violating) > 0:
+                # 7: remove w from PG Table;
+                # score_res, mvsEl, mfsEl = self.score(violating, frequent, X1)
+                score_res, mvsEl = self.new_score2(violating, X1, relative_freq, alpha, beta)
+            # 8: add w to Sup;
+            sup.append(w)
+        # 9: end
+        return sup
+
+    def update_score(self,scores,mvsEl):
+        updated_scores = {}
+        all_elem = [sublist for sublist in mvsEl]
+        all_elem_set = set(all_elem)
         for key,value in scores.items():
-            updated_with_freq[key] = value + (1 - relative_freq[key])
-        return updated_with_freq
+            affected_elem = self.get_unique_elment_list(key, mvsEl)
+            updated_scores[key] = value + len(affected_elem) / len(all_elem_set)
+        return updated_scores
 
     def get_freq_list(self,list,relative_freq):
         flat_list = [item for sublist in list for item in sublist]
@@ -194,7 +151,17 @@ class ELReps():
             sum_freq += relative_freq[item]
         return sum_freq
 
-    def score(self,violating, frequent, X1):
+    def get_unique_elment_list(self,el, mvsEl):
+        list_elem =[]
+        for key,value in mvsEl.items():
+            if key == el:
+                list_elem.append(value)
+
+        flat_list = [item for sublist in list_elem[0] for item in sublist]
+        flat_list_set = set(flat_list)
+        return flat_list_set
+
+    def score(self,violating, frequent, X1, relative_freq):
         priv = {v: 0 for v in X1}
         ut = {f: 0 for f in X1}
         mvsEle = {v: [] for v in X1}
@@ -217,17 +184,81 @@ class ELReps():
                     mfsEle[el].append(f)
         score = {el: 0 for el in X1}
         for el in X1:
-            score_val = priv[el] / (ut[el] + 1)
+            if ut[el] == 0:
+                score_val = priv[el] + (1 - relative_freq[el])
+            else:
+                score_val = priv[el] / (ut[el] + 1)
+            score[el] = score_val
+            if score[el] == 0:
+                del score[el]
 
-            # #normalized score
-            # score_norm = score_val / len(violating)
-            # score[el] = score_norm
+        return score, mvsEle, mfsEle
+
+    def new_score(self,violating, frequent, X1, relative_freq,alpha, beta): #consider relative frequencies as well as MFT
+        priv = {v: 0 for v in X1}
+        ut = {f: 0 for f in X1}
+        mvsEle = {v: [] for v in X1}
+        mfsEle = {f: [] for f in X1}
+        for v in violating:
+            if isinstance(v[0], str):
+                priv[v] += 1
+                mvsEle[v].append(v)
+            else:
+                for el in v:
+                    priv[el] += 1
+                    mvsEle[el].append(v)
+        for f in frequent:
+            if isinstance(f[0], str):
+                ut[f] += 1
+                mfsEle[f].append(f)
+            else:
+                for el in f:
+                    ut[el] += 1
+                    mfsEle[el].append(f)
+        score = {el: 0 for el in X1}
+        for el in X1:
+            privacy = priv[el] / len(violating)
+            if ut[el] != 0:
+                utility = 1 - (ut[el] / len(frequent))
+            else:
+                utility = (1 - relative_freq[el])**2
+            if privacy == 0:
+                score_val = 0
+            else:
+                score_val = alpha * privacy + beta * utility
 
             score[el] = score_val
             if score[el] == 0:
                 del score[el]
 
         return score, mvsEle, mfsEle
+
+    def new_score2(self,violating, X1, relative_freq,alpha, beta): #consider relative frequencies as well as MFT
+        priv = {v: 0 for v in X1}
+        mvsEle = {v: [] for v in X1}
+        for v in violating:
+            if isinstance(v[0], str):
+                priv[v] += 1
+                mvsEle[v].append(v)
+            else:
+                for el in v:
+                    priv[el] += 1
+                    mvsEle[el].append(v)
+
+        score = {el: 0 for el in X1}
+        for el in X1:
+            privacy = priv[el] / len(violating)
+            utility = 1 - relative_freq[el]
+            if privacy == 0:
+                score_val = 0
+            else:
+                score_val = alpha * privacy + beta * utility
+
+            score[el] = score_val
+            if score[el] == 0:
+                del score[el]
+
+        return score, mvsEle
 
     def suppressT(self,logsimple, sup):
         for key in logsimple.keys():
@@ -239,41 +270,7 @@ class ELReps():
             logsimple[key]['trace'] = list_trace
         return logsimple
 
-    # def create_tuple(self,trace,trace_attributes,life_cycle,all_life_cycle):
-    #     life_cycle_prefix = ['lifecycle:transition']
-    #     trace_tuple = []
-    #     life_cycle_value = ''
-    #     for event_index, event in enumerate(trace):
-    #         # basis for tuple of (event,time)
-    #         simple_event = [[], []]
-    #         simple_attr_temp = []
-    #         event_dict = {}
-    #         for key, value in event.items():
-    #             if key in trace_attributes:
-    #                 event_dict[key] = value
-    #                 # simple_attr_temp.append(value)
-    #             if key in life_cycle_prefix:
-    #                 # sample all sensitive values for one trace in sens
-    #                 life_cycle_value = value
-    #         if all_life_cycle or (life_cycle_value in life_cycle):
-    #             if len(event_dict) < 2:
-    #                 simple_event[0] = list(event_dict.values())[0]
-    #                 # simple_event[0] = tuple(simple_attr_temp)[0]
-    #             else:
-    #                 for att in trace_attributes:
-    #                     if att in event_dict:
-    #                         simple_attr_temp.append(event_dict[att])
-    #                 simple_event[0] = tuple(simple_attr_temp)
-    #             tu = (simple_event[0])
-    #             trace_tuple.append(tu)
-    #             # if len(simple_attr_temp) < 2:
-    #             #     simple_event[0] = tuple(simple_attr_temp)[0]
-    #             # else:
-    #             #     simple_event[0] = tuple(simple_attr_temp)
-    #             # tu = (simple_event[0])
-    #             # trace_tuple.append(tu)
-    #     return trace_tuple
-    def create_tuple(self, case, trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix, time_prefix, bk_type,time_based,sensitive_attributes,time_accuracy):
+    def create_trace(self, case, trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix, time_prefix, bk_type,sensitive_attributes,time_accuracy, from_create_event_log):
         sens = {}
         trace = []
         trace_temp = []
@@ -287,7 +284,7 @@ class ELReps():
                 # Filtering out the needed attributes and create new log out of it
                 # simplify timestamp to timeintervalls as precise as spectime
                 # pair[1] = time
-                if bk_type == 'sequence' and time_based and key in time_prefix:
+                if bk_type == 'relative' and key in time_prefix:
                     if event_index == 0:
                         starttime = value
                         time = 0
@@ -324,32 +321,31 @@ class ELReps():
                         if att in event_dict:
                             simple_attr_temp.append(event_dict[att])
                     simple_event[0] = tuple(simple_attr_temp)
-                if bk_type == 'sequence' and time_based:
+                if bk_type == 'relative':
                     simple_event[1] = time
                     tu = (simple_event[0], simple_event[1])
-                    trace.append(tu)
                 elif bk_type == 'multiset':
                     tu = (simple_event[0])
                     trace_temp.append(simple_event[0])
-                    trace.append(tu)
                 elif bk_type == 'sequence':  # or bk_type == 'multiset':
                     count_event = trace_temp.count(simple_event[0])
                     simple_event[1] = count_event + 1
                     tu = (simple_event[0], simple_event[1])
                     trace_temp.append(simple_event[0])
-                    trace.append(tu)
                 elif bk_type == 'set':
                     simple_event[1] = 0
                     tu = (simple_event[0], simple_event[1])
-                    trace.append(tu)
+                trace.append(tu)
+        if bk_type == 'multiset' and not from_create_event_log:
+            trace = self.get_multiset_log(trace)
 
         return trace, sens
 
-    def createEventLog(self, simplifiedlog, spectime, trace_attributes,life_cycle,all_life_cycle,bk_type,time_based, sensitive_attributes, time_accuracy):
+    def createEventLog(self, simplifiedlog, spectime, trace_attributes,life_cycle,all_life_cycle,bk_type, sensitive_attributes, time_accuracy):
         time_prefix = ['time:timestamp']
         life_cycle_prefix = ['lifecycle:transition']
         deleteLog = []
-        log = self.log
+        log = copy.deepcopy(self.log)
         d = 0
         d_l = 0
         for i in range(0, len(log)):
@@ -361,13 +357,12 @@ class ELReps():
             k = 0
             j = 0
             del_list = []
-            trace_tuple, sens = self.create_tuple(log[i], trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix,
-                                            time_prefix, bk_type, time_based, sensitive_attributes, time_accuracy)
-            # trace_tuple = self.create_tuple(log[i], trace_attributes, life_cycle,all_life_cycle)
+            simple_trace, sens = self.create_trace(log[i], trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix,
+                                            time_prefix, bk_type, sensitive_attributes, time_accuracy, True)
             starttime = 0
             while j < len(log[i]): #and k < len(trace):
-                # if trace_tuple[j] in [el[0] for el in trace]:
-                if trace_tuple[j] in trace:
+                if (bk_type !='multiset' and simple_trace[j] in trace) or \
+                        (bk_type =='multiset' and simple_trace[j] in [el[0] for el in trace]):
                     if spectime == "seconds":
                         if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
@@ -667,7 +662,7 @@ class ELReps():
             days -= 1
         return month, days
 
-    def get_relative_freq(self, list_traces):
+    def get_relative_freq_in_log(self, list_traces): # get relative frequency of the events in the whole event log
         flat_list = [item for sublist in list_traces for item in sublist]
         flat_list_set = set(flat_list)
         flat_list_dict = {item: 0 for item in flat_list_set}
@@ -677,3 +672,33 @@ class ELReps():
             freq = items[1] / len(flat_list)
             flat_list_dict[items[0]] = freq
         return flat_list_dict
+
+    def get_relative_freq_in_variants(self, list_traces): #gets the relative frequency of events based on their appearnce in the variants
+        #variants
+        # list_unique_traces = [tuple(x) for x in set(tuple(x) for x in list_traces)]
+        list_tuple_traces = [tuple(x) for x in list_traces]
+        tuple_traces = tuple(list_tuple_traces)
+        c = Counter(tuple_traces) #variants with frequencies
+
+        #events
+        flat_list = [item for sublist in list_traces for item in sublist]
+        flat_list_set = set(flat_list)
+        flat_list_dict = {item: 0 for item in flat_list_set}
+
+
+
+        for event in flat_list_set:
+            for variant in c.items():
+                if event in variant[0]:
+                    flat_list_dict[event] += variant[1]/len(list_traces)
+
+        return flat_list_dict
+
+    def get_relative_freq(self,list_traces): #combines  get_relative_freq_in_log and get_relative_freq_in_variants
+        freq_in_log = self.get_relative_freq_in_log(list_traces)
+        freq_in_variant = self.get_relative_freq_in_variants(list_traces)
+        final_freq = {}
+        for event,freq in freq_in_log.items():
+            final_freq[event] = (0.5*freq_in_log[event]) + (0.5*freq_in_variant[event])
+
+        return final_freq

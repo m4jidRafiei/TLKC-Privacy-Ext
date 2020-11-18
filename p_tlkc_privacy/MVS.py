@@ -8,7 +8,7 @@ import numpy as np
 import operator
 class MVS():
 
-    def __init__(self, T, logsimple, sensitive, cont, sensitives, bk_type, time_based, dict_safe={}):
+    def __init__(self, T, logsimple, sensitive, cont, sensitives, bk_type, dict_safe={}):
         self.T = T
         self.logsimple = logsimple
         self.sensitive = sensitive
@@ -16,7 +16,6 @@ class MVS():
         self.sensitives = sensitives
         self.dev = []
         self.bk_type = bk_type
-        self.time_based = time_based
         self.dict_safe = dict_safe
 
 
@@ -85,7 +84,7 @@ class MVS():
             w[0].sort(key=operator.itemgetter(1))
             X1.clear()
             # 12: Xi+1 ! Wi ! Wi;
-            if self.bk_type == 'sequence' and self.time_based: #sequence time
+            if self.bk_type == 'relative': #sequence time
                 while len(w[0]) > 1:
                     candidate = w[0].pop(0)
                     for comb in w[0]:
@@ -99,9 +98,11 @@ class MVS():
                 while len(w[0]) > 1:
                     candidate = w[0].pop(0)
                     for comb in w[0]:
-                        if comb[0] != candidate[0]:
+                        if comb[0] != candidate[0] and comb[1] >= candidate[1]:
                             X1.append([candidate, comb])
-                        elif comb[1] > candidate[1]:
+                        # elif comb[0] != candidate[0] and comb[1] < candidate[1]:
+                        #     X1.append([comb, candidate])
+                        if comb[1] > candidate[1]:
                             X1.append([candidate, comb])
                         elif comb[1] < candidate[1]:
                             X1.append([comb, candidate])
@@ -182,7 +183,7 @@ class MVS():
 
 
     def w_create(self, w, i, X1, violating, L):
-        if self.bk_type == 'sequence' and self.time_based:  #sequence time
+        if self.bk_type == 'relative':  #sequence time
             while len(w[i]) > 0:
                 candidate = w[i].pop()
                 for comb in w[i]:
@@ -235,8 +236,12 @@ class MVS():
                 for comb in w[i]:
                     add = False
                     add2 = False
-                    if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]:
+                    if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0] and \
+                            comb[i][1] >= candidate[i][1]:
                         add = True
+                    # elif candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0] and \
+                    #         comb[i][1] < candidate[i][1]:
+                    #     add2 = True
                     elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
                             and comb[i][1] > candidate[i][1]:
                         add = True
@@ -377,13 +382,24 @@ class MVS():
                 for key, value in self.logsimple.items():
                     tr = value["trace"]
                     S = value["sensitive"]
-                    if self.bk_type == 'set' or self.bk_type == 'multiset':
+                    if self.bk_type == 'set': #or self.bk_type == 'multiset':
                         if all(elem in tr for elem in q):
                             count[tuple(q)] += 1
                             el_trace[tuple(q)].append(value)
                             #listing all values of the different sensitive attributes (key2)
                             for key2, value2 in S.items():
                                 prob[tuple(q)][key2].append(value2)
+                    #new multiset (real)
+                    elif self.bk_type == 'multiset':
+                        for elem in q:
+                            for ev in tr:
+                                if elem[0] == ev[0] and elem[1] <= ev[1]:
+                                    count[tuple(q)] += 1
+                                    el_trace[tuple(q)].append(value)
+                                    # listing all values of the different sensitive attributes (key2)
+                                    for key2, value2 in S.items():
+                                        prob[tuple(q)][key2].append(value2)
+
                     else:
                         included = False
                         for j in range(0, len(q)):
@@ -410,7 +426,7 @@ class MVS():
                 #calculating the distribution of s for q
             for q in X1:
                 prob = self.sens_boxplot(prob, count, q, i)
-        else:
+        else: # first is false
             if i == 0:
                 for key, value in self.logsimple.items():
                   #creating prob(q|s) and count(q)
@@ -445,7 +461,8 @@ class MVS():
                                     count[tuple(q)] += 1
                                     newel_trace[tuple(q)].append(value.copy())
                                     for key2, value2 in S.items():
-                                        prob[tuple(q)][key2].append(value2)
+                                        if type(prob[tuple(q)][key2]) is list:
+                                            prob[tuple(q)][key2].append(value2)
                         else:
                             # if tuple(q[0:i]) not in el_trace.keys():
                             #     print(el_trace)
@@ -467,9 +484,10 @@ class MVS():
                                     count[tuple(q)] += 1
                                     newel_trace[tuple(q)].append(value.copy())
                                     for key2, value2 in S.items():
-                                        prob[tuple(q)][key2].append(value2)
+                                        if type(prob[tuple(q)][key2]) is list:
+                                            prob[tuple(q)][key2].append(value2)
                         prob = self.sens_boxplot(prob, count, q, i)
-                else:
+                else: # type is set or multiset
                     for key, value in self.logsimple.items():
                         for q in X1:
                             if len(q) == 2:
@@ -477,27 +495,44 @@ class MVS():
                                 S = value["sensitive"]
                                 included = True
                                 for j in range(0,len(q)):
-                                    if q[j] not in tr:
+                                    if q[j][0] not in [ev[0] for ev in tr]:
                                         included = False
                                         break
+                                    #new multiset
+                                    elif self.bk_type == 'multiset':
+                                        for ev in tr:
+                                            if q[j][0] == ev[0] and q[j][1] > ev[1]:
+                                                included = False
+                                                break
                                 if included:
                                     count[tuple(q)] += 1
                                     newel_trace[tuple(q)].append(value.copy())
                                     for key2, value2 in S.items():
-                                        prob[tuple(q)][key2].append(value2)
-                            else:
+                                        if type(prob[tuple(q)][key2]) is list:
+                                            prob[tuple(q)][key2].append(value2)
+                            else: #len q > 2
                                 tr = value["trace"]
                                 S = value["sensitive"]
                                 included = True
                                 for j in range(0, len(q)):
-                                    if q[j] not in tr:
+                                    # if q[j] not in tr:
+                                    #     included = False
+                                    #     break
+                                    if q[j][0] not in [ev[0] for ev in tr]:
                                         included = False
                                         break
+                                        # new multiset
+                                    elif self.bk_type == 'multiset':
+                                        for ev in tr:
+                                            if q[j][0] == ev[0] and q[j][1] > ev[1]:
+                                                included = False
+                                                break
                                 if included:
                                     count[tuple(q)] += 1
                                     newel_trace[tuple(q)].append(value.copy())
                                     for key2, value2 in S.items():
-                                        prob[tuple(q)][key2].append(value2)
+                                        if type(prob[tuple(q)][key2]) is list:
+                                            prob[tuple(q)][key2].append(value2)
                     for q in X1:
                         prob = self.sens_boxplot(prob, count, q, i)
                 el_trace = newel_trace.copy()
@@ -561,6 +596,8 @@ class MVS():
                     lower_quartile = np.percentile(prob[tuple(q)][key], 25)
                     higher_quartile = np.percentile(prob[tuple(q)][key], 75)
                 else:
+                    if type(prob[tuple(q)][key]) is not list:
+                        continue
                     freq = {v: 0 for v in prob[tuple(q)][key]}
                 for item in prob[tuple(q)][key]:
                     # continious variables are handled with standard deviation
