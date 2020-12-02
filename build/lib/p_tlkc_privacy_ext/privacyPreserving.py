@@ -17,7 +17,7 @@ class privacyPreserving(object):
         '''
         self.log = xes_importer_factory.apply(log)
 
-    def apply(self, T, L, K, C, sensitive_att, cont, bk_type, trace_attributes, life_cycle, all_life_cycle, alpha, beta, directory, file_name, short_name):
+    def apply(self, T, L, K, C, sensitive_att, cont, bk_type, trace_attributes, life_cycle, all_life_cycle, alpha, beta, directory, file_name, external_name):
 
         if bk_type == 'relative':
             dict1 = {
@@ -47,12 +47,12 @@ class privacyPreserving(object):
                             dict1 = dict2
                             for t in T:
                                 self.add_privacy_metadata(log[t])
-                                if short_name:
-                                    n_file_path = file_name + "_anon.xes"
+                                if external_name:
+                                    privacy_aware_log_dir = os.path.join(directory, file_name)
                                 else:
                                     n_file_path = file_name + "_" + str(t) + "_" + str(l) + "_" + str(k) + "_" + str(
                                         c) + "_" + bk_type + ".xes"
-                                privacy_aware_log_dir = os.path.join(directory, n_file_path)
+                                    privacy_aware_log_dir = os.path.join(directory, n_file_path)
                                 xes_exporter.export_log(log[t], privacy_aware_log_dir)
                                 print(n_file_path + " has been exported!")
                         elif bk_type == "relative":
@@ -63,12 +63,12 @@ class privacyPreserving(object):
                                                              trace_attributes, life_cycle, all_life_cycle, bk_type,
                                                              alpha, beta)
                                 self.add_privacy_metadata(log_time)
-                                if short_name:
-                                    n_file_path = file_name + "_anon.xes"
+                                if external_name:
+                                    privacy_aware_log_dir = os.path.join(directory, file_name)
                                 else:
                                     n_file_path = file_name + "_" + str(t) + "_" + str(l) + "_" + str(k) + "_" + str(
                                     c) + "_" + bk_type + ".xes"
-                                privacy_aware_log_dir = os.path.join(directory, n_file_path)
+                                    privacy_aware_log_dir = os.path.join(directory, n_file_path)
                                 xes_exporter.export_log(log_time, privacy_aware_log_dir)
                                 print(n_file_path + " has been exported!")
                                 dict1 = dict2
