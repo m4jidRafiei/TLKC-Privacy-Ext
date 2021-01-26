@@ -4,6 +4,8 @@ from pm4py.objects.log.log import Trace, EventLog
 from pm4py.objects.log.util import sorting
 from collections import Counter
 from multiset import Multiset
+from dateutil.relativedelta import relativedelta
+from calendar import monthrange
 import copy
 
 class ELReps():
@@ -274,6 +276,11 @@ class ELReps():
         sens = {}
         trace = []
         trace_temp = []
+        sens_dict = {}
+        for key, value in case.attributes.items():
+            if key in sensitive_attributes:
+                sens_dict[key] = value
+
         for event_index, event in enumerate(case):
             # basis for tuple of (event,time)
             simple_event = [[], []]
@@ -308,7 +315,7 @@ class ELReps():
                     # simple_attr_temp.append(event_dict)
                 if key in sensitive_attributes:
                     # sample all sensitive values for one trace in sens
-                    sens[key] = value
+                    sens_dict[key] = value
                 if key in life_cycle_prefix:
                     # sample all sensitive values for one trace in sens
                     life_cycle_value = value
@@ -336,6 +343,11 @@ class ELReps():
                     simple_event[1] = 0
                     tu = (simple_event[0], simple_event[1])
                 trace.append(tu)
+
+                for item in sensitive_attributes:
+                    if item in sens_dict:
+                        sens[item] = sens_dict[item]
+
         if bk_type == 'multiset' and not from_create_event_log:
             trace = self.get_multiset_log(trace)
 
@@ -366,95 +378,137 @@ class ELReps():
                     if spectime == "seconds":
                         if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
-                            log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
+                            base_year = starttime.year
+                            log[i][j]['time:timestamp'] = datetime.datetime(year=base_year, month=1, day=1,
                                                                             hour=0, minute=0, second=0)
                         else:
-                            timedif = log[i][j]['time:timestamp'] - starttime
-                            years = int(timedif.days / 365)
-                            daystime = timedif.days - years * 365
-                            month, days = self.month_translate(daystime)
-                            sectim = timedif.seconds
-                            # 60sec -> 1 min, 60*60sec -> 60 min -> 1 hour
-                            hours = int(sectim / 3600)
-                            sectim = sectim - hours * 3600
-                            minutes = int(sectim / 60)
-                            sectim = sectim - minutes * 60
+                            # timedif = log[i][j]['time:timestamp'] - starttime
+                            # years = int(timedif.days / 365)
+                            # daystime = timedif.days - years * 365
+                            # month, days = self.month_translate(daystime)
+                            # sectim = timedif.seconds
+                            # # 60sec -> 1 min, 60*60sec -> 60 min -> 1 hour
+                            # hours = int(sectim / 3600)
+                            # sectim = sectim - hours * 3600
+                            # minutes = int(sectim / 60)
+                            # sectim = sectim - minutes * 60
+                            startstr = starttime.strftime("%Y-%m-%d %H:%M:%S")
+                            endstr = log[i][j]['time:timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+                            start = datetime.datetime.strptime(startstr, '%Y-%m-%d %H:%M:%S')
+                            ends = datetime.datetime.strptime(endstr, '%Y-%m-%d %H:%M:%S')
+                            diff = relativedelta(ends, start)
+                            years = diff.years
+                            month = diff.months
+                            days = diff.days
+                            hours = diff.hours
+                            minutes = diff.minutes
+                            sectim = diff.seconds
                             try:
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1 + month,
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
                                                                             day=1 + days, hour=hours,
                                                                             minute=minutes, second=sectim)
                             except:
-                                days = days - 1
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970,
+                                daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
+                                if days >= daysOfmonth:
+                                    daydiff = days - daysOfmonth
+                                    month += 1
+                                    days = daydiff
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day=1 + days, hour=hours,
                                                                                 minute=minutes, second=sectim)
                     elif spectime == "minutes":
                         if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
-                            log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
+                            base_year = starttime.year
+                            log[i][j]['time:timestamp'] = datetime.datetime(year=base_year, month=1, day=1,
                                                                             hour=0, minute=0,second=0)
                         else:
-                            timedif = log[i][j]['time:timestamp'] - starttime
-                            years = int(timedif.days / 365)
-                            daystime = timedif.days - years * 365
-                            month, days = self.month_translate(daystime)
-                            sectim = timedif.seconds
-                            # 60sec -> 1 min, 60*60sec -> 60 min -> 1 hour
-                            hours = int(sectim / 3600)
-                            sectim = sectim - hours * 3600
-                            minutes = int(sectim / 60)
+                            startstr = starttime.strftime("%Y-%m-%d %H:%M:%S")
+                            endstr = log[i][j]['time:timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+                            start = datetime.datetime.strptime(startstr, '%Y-%m-%d %H:%M:%S')
+                            ends = datetime.datetime.strptime(endstr, '%Y-%m-%d %H:%M:%S')
+                            diff = relativedelta(ends, start)
+                            years = diff.years
+                            month = diff.months
+                            days = diff.days
+                            hours = diff.hours
+                            minutes = diff.minutes
+                            sectim = diff.seconds
+
                             try:
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1 + month,
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
                                                                             day=1 + days, hour=hours,
                                                                             minute=minutes,second=0)
                             except:
-                                days = days - 1
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970,
+                                daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1+ month)[1]
+                                if days >= daysOfmonth:
+                                    daydiff = days - daysOfmonth
+                                    month += 1
+                                    days = daydiff
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day=1 + days, hour=hours,
                                                                                 minute=minutes, second=0)
                     elif spectime == "hours":
                         if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
-                            log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
+                            base_year = starttime.year
+                            log[i][j]['time:timestamp'] = datetime.datetime(year=base_year, month=1, day=1,
                                                                             hour=0,minute=0,second=0)
                         else:
-                            timedif = log[i][j]['time:timestamp'] - starttime
-                            years = int(timedif.days / 365)
-                            daystime = timedif.days - years * 365
-                            month, days = self.month_translate(daystime)
-                            sectim = timedif.seconds
-                            # 60sec -> 1 min, 60*60sec -> 60 min -> 1 hour
-                            hours = int(sectim / 3600)
+                            startstr = starttime.strftime("%Y-%m-%d %H:%M:%S")
+                            endstr = log[i][j]['time:timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+                            start = datetime.datetime.strptime(startstr, '%Y-%m-%d %H:%M:%S')
+                            ends = datetime.datetime.strptime(endstr, '%Y-%m-%d %H:%M:%S')
+                            diff = relativedelta(ends, start)
+                            years = diff.years
+                            month = diff.months
+                            days = diff.days
+                            hours = diff.hours
+                            minutes = diff.minutes
+                            sectim = diff.seconds
                             try:
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1 + month,
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
                                                                           day=1 + days, hour=hours,minute=0,second=0)
                             except:
-                                days = days - 1
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970,
+                                daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
+                                if days >= daysOfmonth:
+                                    daydiff = days - daysOfmonth
+                                    month += 1
+                                    days = daydiff
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day=1 + days, hour=hours, minute=0,
                                                                                 second=0)
                     elif spectime == "days":
                         if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
-                            log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1, day=1,
+                            base_year = starttime.year
+                            log[i][j]['time:timestamp'] = datetime.datetime(year=base_year, month=1, day=1,
                                                                             hour=0,minute=0,second=0)
                         else:
-                            timedif = log[i][j]['time:timestamp'] - starttime
-                            years = int(timedif.days / 365)
-                            daystime = timedif.days - years * 365
-                            month, days = self.month_translate(daystime)
-                            sectim = timedif.seconds
-                            # 60sec -> 1 min, 60*60sec -> 60 min -> 1 hour
-                            # days = int(sectim / 3600 * 24)
+                            startstr = starttime.strftime("%Y-%m-%d %H:%M:%S")
+                            endstr = log[i][j]['time:timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+                            start = datetime.datetime.strptime(startstr, '%Y-%m-%d %H:%M:%S')
+                            ends = datetime.datetime.strptime(endstr, '%Y-%m-%d %H:%M:%S')
+                            diff = relativedelta(ends, start)
+                            years = diff.years
+                            month = diff.months
+                            days = diff.days
+                            hours = diff.hours
+                            minutes = diff.minutes
+                            sectim = diff.seconds
                             try:
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970, month=1 + month,
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
                                                                             day= 1+ days, hour=0,minute=0,second=0)
                             except:
-                                days = days -1
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=datetime.MINYEAR + 1970,
+                                daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
+                                if days >= daysOfmonth:
+                                    daydiff = days - daysOfmonth
+                                    month += 1
+                                    days = daydiff
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day=1 + days, hour=0, minute=0,
                                                                                 second=0)

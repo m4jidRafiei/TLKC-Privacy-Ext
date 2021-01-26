@@ -95,10 +95,10 @@ class MVS():
                         elif comb[1] < candidate[1]:
                             X1.append([comb, candidate])
             elif self.bk_type == 'sequence': #sequence
-                while len(w[0]) > 1:
+                for iter in range(len(w[0])):
                     candidate = w[0].pop(0)
                     for comb in w[0]:
-                        if comb[0] != candidate[0] and comb[1] >= candidate[1]:
+                        if comb[0] != candidate[0]: #and comb[1] >= candidate[1]:
                             X1.append([candidate, comb])
                         # elif comb[0] != candidate[0] and comb[1] < candidate[1]:
                         #     X1.append([comb, candidate])
@@ -106,6 +106,9 @@ class MVS():
                             X1.append([candidate, comb])
                         elif comb[1] < candidate[1]:
                             X1.append([comb, candidate])
+                    w[0].append(candidate)
+                    iter += 1
+
             elif self.bk_type == 'set': #set
                 while len(w[0]) > 1:
                     candidate = w[0].pop(0)
@@ -231,13 +234,13 @@ class MVS():
                                 del X1[-1]
                                 break
         elif self.bk_type == 'sequence': #sequence
-            while len(w[i]) > 0:
+            for iter in range(len(w[i])):
                 candidate = w[i].pop()
                 for comb in w[i]:
                     add = False
                     add2 = False
-                    if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0] and \
-                            comb[i][1] >= candidate[i][1]:
+                    if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]: #and \
+                            #comb[i][1] >= candidate[i][1]:
                         add = True
                     # elif candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0] and \
                     #         comb[i][1] < candidate[i][1]:
@@ -286,6 +289,8 @@ class MVS():
                                 if included:
                                     del X1[-1]
                                     break
+                w[i].append(candidate)
+                iter += 1
 
         elif self.bk_type == 'multiset': #multiset
             while len(w[i]) > 0:

@@ -22,14 +22,13 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'pm4py==1.2.10',
-        'typing==3.6.4',
-        'setuptools==41.0.1',
-        'mlxtend==0.14.0',
-        'pyfpgrowth==1.0',
-        'pandas>=0.24.2',
-        'numpy>=1.18.1',
-        'p_privacy_metadata==0.0.4'
+        'pyfpgrowth == 1.0',
+        'multiset == 2.1.1',
+        'pm4py == 1.2.10',
+        'numpy >= 1.18.1',
+        'p_privacy_metadata == 0.0.4',
+        'pandas >= 0.24.2',
+        'mlxtend == 0.14.0'
     ],
     project_urls={
         'Source': 'https://github.com/m4jidRafiei/TLKC-Privacy-Ext'
