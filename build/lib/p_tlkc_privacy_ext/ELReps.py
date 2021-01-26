@@ -512,6 +512,8 @@ class ELReps():
                                                                                 month=1 + month,
                                                                                 day=1 + days, hour=0, minute=0,
                                                                                 second=0)
+                    elif spectime == "original":
+                        pass
                     k += 1
                     j += 1
                 else:
