@@ -1,11 +1,9 @@
-# Input: Raw trajectory data table T
-# Input: Thresholds L, K, and C
-# Input: Sensitive values sensitive
-#Input: logsimple (dict) gives all traces in combination with sensitive values
-#Input: cont (list) gives which sensitive attributes are cont
-#Output: violating (list) all minimal violating subtraces
+import copy
+
 import numpy as np
+import multiprocessing as mp
 import operator
+
 class MVS():
 
     def __init__(self, T, logsimple, sensitive, cont, sensitives, bk_type, dict_safe={}):
@@ -19,7 +17,7 @@ class MVS():
         self.dict_safe = dict_safe
 
 
-    def mvs(self, L, K, C,t = None):
+    def mvs(self, L, K, C, multiprocess, t = None):
         i = L
         while i > 0 and i < L + 1:
             i -= 1
@@ -47,7 +45,7 @@ class MVS():
                 # 11: end for
                 X1.clear()
                 # 12: Xi+1 ! Wi ! Wi;
-                X1 = self.w_create(w, i, X1, violating, L)
+                X1 = self.w_create(w, i, X1, violating, L, multiprocess)
                 print("X1: " + str(len(X1)))
                 i += 1
                 break
@@ -85,7 +83,7 @@ class MVS():
             X1.clear()
             # 12: Xi+1 ! Wi ! Wi;
             if self.bk_type == 'relative': #sequence time
-                while len(w[0]) > 1:
+                for iterator in range(len(w[0])):
                     candidate = w[0].pop(0)
                     for comb in w[0]:
                         if comb[1] > candidate[1]:
@@ -94,21 +92,21 @@ class MVS():
                             X1.append([candidate, comb])
                         elif comb[1] < candidate[1]:
                             X1.append([comb, candidate])
+                    w[0].append(candidate)
+                    iterator += 1
+
             elif self.bk_type == 'sequence': #sequence
                 for iter in range(len(w[0])):
                     candidate = w[0].pop(0)
                     for comb in w[0]:
-                        if comb[0] != candidate[0]: #and comb[1] >= candidate[1]:
+                        if comb[0] != candidate[0]:
                             X1.append([candidate, comb])
-                        # elif comb[0] != candidate[0] and comb[1] < candidate[1]:
-                        #     X1.append([comb, candidate])
                         if comb[1] > candidate[1]:
                             X1.append([candidate, comb])
                         elif comb[1] < candidate[1]:
                             X1.append([comb, candidate])
                     w[0].append(candidate)
                     iter += 1
-
             elif self.bk_type == 'set': #set
                 while len(w[0]) > 1:
                     candidate = w[0].pop(0)
@@ -122,32 +120,6 @@ class MVS():
                         if sorted([candidate, comb]) not in X1:
                             if comb[0] != candidate[0] and (comb[1] + candidate[1]) <= L:
                                 X1.append(sorted([candidate, comb]))
-                            # elif comb[0] == candidate[0] and comb[1] != candidate[1]:
-                            #     X1.append(sorted([candidate, comb]))
-
-            # elif self.set and self.count:
-            #     while len(w[0]) > 1:
-            #         candidate = w[0].pop(0)
-            #         for comb in w[0]:
-            #             if sorted([candidate, comb]) not in X1:
-            #                 if comb[0] != candidate[0]:
-            #                     #more checks ----- if the candidate possible based on event log
-            #                     for key,process_instance in self.logsimple.items():
-            #                         if(self.sublist(process_instance['trace'],sorted([candidate, comb]))):
-            #                             X1.append(sorted([candidate, comb]))
-            #                             break
-            #                 elif comb[0] == candidate[0] and comb[1] != candidate[1]:
-            #                     for key,process_instance in self.logsimple.items():
-            #                         if(self.sublist(process_instance['trace'],sorted([candidate, comb]))):
-            #                             X1.append(sorted([candidate, comb]))
-            #                             break
-
-
-            # 13: for %q & Xi+1 do
-            # should not be necessary for first round
-            # 15: Remove q from Xi+1;
-            # 16: end if
-            # 17: end for
             i = 1
             print("X1: " + str(len(X1)))
         # 3: while i <= L or Xi not empty do
@@ -163,12 +135,14 @@ class MVS():
             w, violating = self.w_violating(gen, count, violating, prob, K, C, w, i)
             # 10: end if
             # 11: end for
-            X1.clear()
-            # 12: Xi+1 ! Wi ! Wi;
-            X1 = self.w_create(w, i, X1, violating, L)
-            print("X1: " + str(len(X1)))
-            # 18: i++;
             i += 1
+            if i < L:
+                X1.clear()
+                # 12: Xi+1 ! Wi ! Wi;
+                X1 = self.w_create(w, i-1, X1, violating, L, multiprocess)
+                print("X1: " + str(len(X1)))
+            # 18: i++;
+
         # 19: end while
         # 20: return V (T) = V1 ' · · · ' Vi−1;
         if t is None:
@@ -184,46 +158,81 @@ class MVS():
 
         return violatingConj, self.dict_safe
 
+    def chunk(self, data, parts):
+        divided = [None] * parts
+        n = len(data) // parts
+        for i in range(parts):
+            divided[i] = data[i * n:n * (i + 1)]
+        if len(data) % 2 != 0:
+            divided[-1] += [data[-1]]
+        return divided
 
-    def w_create(self, w, i, X1, violating, L):
-        if self.bk_type == 'relative':  #sequence time
-            while len(w[i]) > 0:
-                candidate = w[i].pop()
-                for comb in w[i]:
-                    if candidate[0:i] == comb[0:i] and candidate[i][1] > comb[i][1]:
-                        X1.append([])
-                        X1[len(X1) - 1] = comb[:]
-                        X1[len(X1) - 1].append(candidate[i])
-                    elif candidate[0:i] == comb[0:i] and candidate[i][1] < comb[i][1]:
-                        X1.append([])
-                        X1[len(X1) - 1] = candidate[:]
-                        X1[len(X1) - 1].append(comb[i])
-                    elif candidate[0:i] == comb[0:i] and candidate[i][1] == comb[i][1] and candidate[i][1] != comb[i][1]:
-                        X1.append([])
-                        X1[len(X1) - 1] = candidate[:]
-                        X1[len(X1) - 1].append(comb[i])
-                    else:
-                        break
-                    if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
-                        del X1[-1]
+    def chunkIt(self, data, num):
+        avg = len(data) / float(num)
+        out = []
+        last = 0.0
+
+        while last < len(data):
+            out.append(data[int(last):int(last + avg)])
+            last += avg
+
+        return out
+
+    def X1_generator_seq(self, data,i,X1,violating):
+        # replace w[i] with data
+        # copy X1 to Z1
+        Z1 = copy.deepcopy(X1)
+        for iter in range(len(data)):
+            candidate = data.pop(0)
+            for comb in data:
+                add = False
+                add2 = False
+                try:
+                    if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]:
+                        add = True
+                except:
+                    print(candidate)
+                    print(comb)
+                    print(i)
+
+                if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]:  # and \
+                    # comb[i][1] >= candidate[i][1]:
+                    add = True
+                elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
+                        and comb[i][1] > candidate[i][1]:
+                    add = True
+                elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
+                        and comb[i][1] < candidate[i][1]:
+                    add2 = True
+                if add:
+                    Z1.append([])
+                    Z1[len(Z1) - 1] = candidate[:]
+                    Z1[len(Z1) - 1].append(comb[i])
+                elif add2:
+                    Z1.append([])
+                    Z1[len(Z1) - 1] = comb[:]
+                    Z1[len(Z1) - 1].append(candidate[i])
+                if add or add2:
+                    if Z1[len(Z1) - 1] in Z1[0:len(Z1) - 1]:
+                        del Z1[-1]
                     else:
                         # 13: for %q & Xi+1 do
                         # 14: if q is a super sequence of any v & Vi then
                         # 15: Remove q from Xi+1;
+                        if len(Z1) == 0:
+                            break
                         included = False
                         for v in violating[i]:
-                            if len(X1) == 0:
-                                break
-                            if all(elem in X1[len(X1) - 1] for elem in v):
+                            if all(elem in Z1[len(Z1) - 1] for elem in v):
                                 for j in range(0, i + 1):
                                     if j == 0:
-                                        if v[j] in X1[len(X1) - 1]:
-                                            index = X1[len(X1) - 1].index(v[j])
+                                        if v[j] in Z1[len(Z1) - 1]:
+                                            index = Z1[len(Z1) - 1].index(v[j])
                                         else:
                                             break
                                     else:
-                                        if v[j] in X1[len(X1) - 1][index + 1::]:
-                                            index = X1[len(X1) - 1].index(v[j])
+                                        if v[j] in Z1[len(Z1) - 1][index + 1::]:
+                                            index = Z1[len(Z1) - 1].index(v[j])
                                             if j == i:
                                                 included = True
                                                 break
@@ -231,113 +240,171 @@ class MVS():
                                             break
                             # if all(elem in X1[len(X1) - 1] for elem in v):
                             if included:
-                                del X1[-1]
+                                del Z1[-1]
                                 break
-        elif self.bk_type == 'sequence': #sequence
-            for iter in range(len(w[i])):
-                candidate = w[i].pop()
-                for comb in w[i]:
-                    add = False
-                    add2 = False
-                    if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]: #and \
-                            #comb[i][1] >= candidate[i][1]:
-                        add = True
-                    # elif candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0] and \
-                    #         comb[i][1] < candidate[i][1]:
-                    #     add2 = True
-                    elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
-                            and comb[i][1] > candidate[i][1]:
-                        add = True
-                    elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
-                            and comb[i][1] < candidate[i][1]:
-                        add2 = True
-                    if add:
-                        X1.append([])
-                        X1[len(X1) - 1] = candidate[:]
-                        X1[len(X1) - 1].append(comb[i])
-                    elif add2:
-                        X1.append([])
-                        X1[len(X1) - 1] = comb[:]
-                        X1[len(X1) - 1].append(candidate[i])
-                    if add or add2:
-                        if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
-                            del X1[-1]
-                        else:
-                            # 13: for %q & Xi+1 do
-                            # 14: if q is a super sequence of any v & Vi then
-                            # 15: Remove q from Xi+1;
+            data.append(candidate)
+            iter += 1
+
+        return Z1
+
+    def X1_generator_relative(self,data,i,X1,violating):
+        Z1 = copy.deepcopy(X1)
+        for iterator in range(len(data)):
+            candidate = data.pop(0)
+            for comb in data:
+                if candidate[0:i] == comb[0:i] and candidate[i][1] > comb[i][1]:
+                    Z1.append([])
+                    Z1[len(Z1) - 1] = comb[:]
+                    Z1[len(Z1) - 1].append(candidate[i])
+                elif candidate[0:i] == comb[0:i] and candidate[i][1] < comb[i][1]:
+                    Z1.append([])
+                    Z1[len(Z1) - 1] = candidate[:]
+                    Z1[len(Z1) - 1].append(comb[i])
+                elif candidate[0:i] == comb[0:i] and candidate[i][1] == comb[i][1] and candidate[i][1] != comb[i][1]:
+                    Z1.append([])
+                    Z1[len(Z1) - 1] = candidate[:]
+                    Z1[len(Z1) - 1].append(comb[i])
+                else:
+                    break
+                if Z1[len(Z1) - 1] in Z1[0:len(Z1) - 1]:
+                    del Z1[-1]
+                else:
+                    # 13: for %q & Xi+1 do
+                    # 14: if q is a super sequence of any v & Vi then
+                    # 15: Remove q from Xi+1;
+                    included = False
+                    for v in violating[i]:
+                        if len(Z1) == 0:
+                            break
+                        if all(elem in Z1[len(Z1) - 1] for elem in v):
+                            for j in range(0, i + 1):
+                                if j == 0:
+                                    if v[j] in Z1[len(Z1) - 1]:
+                                        index = Z1[len(Z1) - 1].index(v[j])
+                                    else:
+                                        break
+                                else:
+                                    if v[j] in Z1[len(Z1) - 1][index + 1::]:
+                                        index = Z1[len(Z1) - 1].index(v[j])
+                                        if j == i:
+                                            included = True
+                                            break
+                                    else:
+                                        break
+                        # if all(elem in Z1[len(Z1) - 1] for elem in v):
+                        if included:
+                            del Z1[-1]
+                            break
+            data.append(candidate)
+            iterator += 1
+
+        return Z1
+
+    def X1_generator_multiset(self, data, i, X1, violating):
+        while len(data) > 0:
+            candidate = data.pop()
+            for comb in data:
+                if candidate[0:i] == comb[0:i] and comb[i] not in candidate:
+                    if comb[i][0] in [el[0] for el in candidate]:
+                        continue
+                    if comb[i][1] + sum([el[1] for el in candidate]) > L:
+                        continue
+                    X1.append([])
+                    X1[len(X1) - 1] = candidate[:]
+                    X1[len(X1) - 1].append(comb[i])
+                    X1[len(X1) - 1] = sorted(X1[len(X1) - 1])
+                    if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
+                        del X1[-1]
+                    else:
+                        # 13: for %q & Xi+1 do
+                        # 14: if q is a super sequence of any v & Vi then
+                        # 15: Remove q from Xi+1;
+                        for v in violating[i]:
                             if len(X1) == 0:
                                 break
-                            included = False
-                            for v in violating[i]:
-                                if all(elem in X1[len(X1) - 1] for elem in v):
-                                    for j in range(0, i + 1):
-                                        if j == 0:
-                                            if v[j] in X1[len(X1) - 1]:
-                                                index = X1[len(X1) - 1].index(v[j])
-                                            else:
-                                                break
-                                        else:
-                                            if v[j] in X1[len(X1) - 1][index + 1::]:
-                                                index = X1[len(X1) - 1].index(v[j])
-                                                if j == i:
-                                                    included = True
-                                                    break
-                                            else:
-                                                break
-                                # if all(elem in X1[len(X1) - 1] for elem in v):
-                                if included:
-                                    del X1[-1]
-                                    break
-                w[i].append(candidate)
-                iter += 1
+                            if all(elem in X1[len(X1) - 1] for elem in v):
+                                del X1[-1]
+        return X1
+
+    def X1_generator_set(self, data, i, X1, violating):
+        while len(data) > 0:
+            candidate = data.pop()
+            for comb in data:
+                if candidate[0:i] == comb[0:i] and comb[i] not in candidate:
+                    X1.append([])
+                    X1[len(X1) - 1] = candidate[:]
+                    X1[len(X1) - 1].append(comb[i])
+                    X1[len(X1) - 1] = sorted(X1[len(X1) - 1])
+                    if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
+                        del X1[-1]
+                    else:
+                        # 13: for %q & Xi+1 do
+                        # 14: if q is a super sequence of any v & Vi then
+                        # 15: Remove q from Xi+1;
+                        for v in violating[i]:
+                            if len(X1) == 0:
+                                break
+                            if all(elem in X1[len(X1) - 1] for elem in v):
+                                del X1[-1]
+        return X1
+
+
+    def foo_relative(self,q,data,i,X1,violating):
+        Z1 = self.X1_generator_relative(data, i, X1, violating)
+        q.put(Z1)
+
+    def foo_seq(self,q,data,i,X1,violating):
+        Z1 = self.X1_generator_seq(data,i,X1,violating)
+        q.put(Z1)
+
+    def w_create(self, w, i, X1, violating, L, multiprocess):
+        X1_new = []
+        if self.bk_type == 'relative':  #sequence time
+            if multiprocess:
+                workers = int(len(w[i]) / 1000) + 1
+                data_chunks = self.chunkIt(w[i], workers)
+                mp.set_start_method('spawn')
+                jobs = []
+                for worker in range(workers):
+                    print("In worker %d out of %d" %(worker+1, workers))
+                    q = mp.Queue()
+                    p = mp.Process(target=self.foo_relative, args=(q, data_chunks[worker], i, X1, violating))
+                    jobs.append(p)
+                    p.start()
+                    X1_new += q.get()
+
+                for job in jobs:
+                    job.join()
+            else:
+                X1_new = self.X1_generator_relative(w[i], i, X1, violating)
+
+        elif self.bk_type == 'sequence': #sequence
+            if multiprocess:
+                workers = int(len(w[i]) / 1000) + 1
+                data_chunks = self.chunkIt(w[i], workers)
+                mp.set_start_method('spawn')
+                jobs = []
+                for worker in range(workers):
+                    print("In worker %d out of %d" %(worker+1, workers))
+                    q = mp.Queue()
+                    p = mp.Process(target=self.foo_seq, args=(q, data_chunks[worker],i,X1,violating))
+                    jobs.append(p)
+                    p.start()
+                    X1_new += q.get()
+
+                for job in jobs:
+                    job.join()
+            else:
+                X1_new = self.X1_generator_seq(w[i],i,X1,violating)
 
         elif self.bk_type == 'multiset': #multiset
-            while len(w[i]) > 0:
-                candidate = w[i].pop()
-                for comb in w[i]:
-                    if candidate[0:i] == comb[0:i] and comb[i] not in candidate:
-                        if comb[i][0] in [el[0] for el in candidate]:
-                            continue
-                        if comb[i][1] + sum([el[1] for el in candidate]) > L:
-                            continue
-                        X1.append([])
-                        X1[len(X1) - 1] = candidate[:]
-                        X1[len(X1) - 1].append(comb[i])
-                        X1[len(X1) - 1] = sorted(X1[len(X1) - 1])
-                        if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
-                            del X1[-1]
-                        else:
-                            # 13: for %q & Xi+1 do
-                            # 14: if q is a super sequence of any v & Vi then
-                            # 15: Remove q from Xi+1;
-                            for v in violating[i]:
-                                if len(X1) == 0:
-                                    break
-                                if all(elem in X1[len(X1) - 1] for elem in v):
-                                    del X1[-1]
-        elif self.bk_type == 'set': #set
-            while len(w[i])>0:
-                candidate = w[i].pop()
-                for comb in w[i]:
-                    if candidate[0:i] == comb[0:i] and comb[i] not in candidate:
-                        X1.append([])
-                        X1[len(X1) - 1] = candidate[:]
-                        X1[len(X1) - 1].append(comb[i])
-                        X1[len(X1) - 1] = sorted(X1[len(X1) - 1])
-                        if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
-                            del X1[-1]
-                        else:
-                            # 13: for %q & Xi+1 do
-                            # 14: if q is a super sequence of any v & Vi then
-                            # 15: Remove q from Xi+1;
-                            for v in violating[i]:
-                                if len(X1) == 0:
-                                    break
-                                if all(elem in X1[len(X1) - 1] for elem in v):
-                                    del X1[-1]
+            X1_new = self.X1_generator_multiset(w[i],i,X1,violating)
 
-        return X1
+        elif self.bk_type == 'set': #set
+            X1_new = self.X1_generator_set(w[i],i,X1,violating)
+
+
+        return X1_new
 
     def w_violating(self,gen,count,violating,prob, K,C,w, i):
         if i == 0:
@@ -641,3 +708,6 @@ class MVS():
                             highest = newhighest
                 prob[tuple(q)][key] = highest
         return prob
+
+
+
