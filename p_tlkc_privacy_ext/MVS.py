@@ -1,8 +1,10 @@
 import copy
+import os
 
 import numpy as np
 import multiprocessing as mp
 import operator
+
 
 class MVS():
 
@@ -16,8 +18,7 @@ class MVS():
         self.bk_type = bk_type
         self.dict_safe = dict_safe
 
-
-    def mvs(self, L, K, C, multiprocess, t = None):
+    def mvs(self, L, K, C, multiprocess, mp_technique, t=None):
         i = L
         while i > 0 and i < L + 1:
             i -= 1
@@ -45,12 +46,12 @@ class MVS():
                 # 11: end for
                 X1.clear()
                 # 12: Xi+1 ! Wi ! Wi;
-                X1 = self.w_create(w, i, X1, violating, L, multiprocess)
+                X1 = self.w_create(w, i, X1, violating, L, multiprocess, mp_technique)
                 print("X1: " + str(len(X1)))
                 i += 1
                 break
             elif 'X1' in locals() and len(X1) == 0:
-                i = L+1
+                i = L + 1
         # 1: X1 <- set of all distinct pairs in T;
         if i == 0:
             flat_list = [item for sublist in self.T for item in sublist]
@@ -60,14 +61,14 @@ class MVS():
                 not_valid_multiset = []
                 for el in X1:
                     if el[1] > L:
-                        not_valid_multiset. append(el)
+                        not_valid_multiset.append(el)
                 for x in not_valid_multiset:
                     X1.remove(x)
 
             print("X1: " + str(len(X1)))
             # 2: i = 1;
-            #count(q)
-            #prob(q|s)
+            # count(q)
+            # prob(q|s)
             count = {el: 0 for el in X1}
             prob = {v: {el: [] for el in self.sensitive} for v in X1}
             el_trace = {el: [] for el in X1}
@@ -82,7 +83,7 @@ class MVS():
             w[0].sort(key=operator.itemgetter(1))
             X1.clear()
             # 12: Xi+1 ! Wi ! Wi;
-            if self.bk_type == 'relative': #sequence time
+            if self.bk_type == 'relative':  # sequence time
                 for iterator in range(len(w[0])):
                     candidate = w[0].pop(0)
                     for comb in w[0]:
@@ -95,7 +96,7 @@ class MVS():
                     w[0].append(candidate)
                     iterator += 1
 
-            elif self.bk_type == 'sequence': #sequence
+            elif self.bk_type == 'sequence':  # sequence
                 for iter in range(len(w[0])):
                     candidate = w[0].pop(0)
                     for comb in w[0]:
@@ -107,13 +108,13 @@ class MVS():
                             X1.append([comb, candidate])
                     w[0].append(candidate)
                     iter += 1
-            elif self.bk_type == 'set': #set
+            elif self.bk_type == 'set':  # set
                 while len(w[0]) > 1:
                     candidate = w[0].pop(0)
                     for comb in w[0]:
                         if sorted([candidate, comb]) not in X1:
                             X1.append(sorted([candidate, comb]))
-            elif self.bk_type == 'multiset': #multiset
+            elif self.bk_type == 'multiset':  # multiset
                 while len(w[0]) > 1:
                     candidate = w[0].pop(0)
                     for comb in w[0]:
@@ -139,7 +140,7 @@ class MVS():
             if i < L:
                 X1.clear()
                 # 12: Xi+1 ! Wi ! Wi;
-                X1 = self.w_create(w, i-1, X1, violating, L, multiprocess)
+                X1 = self.w_create(w, i - 1, X1, violating, L, multiprocess, mp_technique)
                 print("X1: " + str(len(X1)))
             # 18: i++;
 
@@ -178,7 +179,7 @@ class MVS():
 
         return out
 
-    def X1_generator_seq(self, data,i,X1,violating):
+    def X1_generator_seq(self, data, i, X1, violating):
         # replace w[i] with data
         # copy X1 to Z1
         Z1 = copy.deepcopy(X1)
@@ -247,7 +248,7 @@ class MVS():
 
         return Z1
 
-    def X1_generator_relative(self,data,i,X1,violating):
+    def X1_generator_relative(self, data, i, X1, violating):
         Z1 = copy.deepcopy(X1)
         for iterator in range(len(data)):
             candidate = data.pop(0)
@@ -301,6 +302,7 @@ class MVS():
         return Z1
 
     def X1_generator_multiset(self, data, i, X1, violating):
+        Z1 = copy.deepcopy(X1)
         while len(data) > 0:
             candidate = data.pop()
             for comb in data:
@@ -309,104 +311,143 @@ class MVS():
                         continue
                     if comb[i][1] + sum([el[1] for el in candidate]) > L:
                         continue
-                    X1.append([])
-                    X1[len(X1) - 1] = candidate[:]
-                    X1[len(X1) - 1].append(comb[i])
-                    X1[len(X1) - 1] = sorted(X1[len(X1) - 1])
-                    if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
-                        del X1[-1]
+                    Z1.append([])
+                    Z1[len(Z1) - 1] = candidate[:]
+                    Z1[len(Z1) - 1].append(comb[i])
+                    Z1[len(Z1) - 1] = sorted(Z1[len(Z1) - 1])
+                    if Z1[len(Z1) - 1] in Z1[0:len(Z1) - 1]:
+                        del Z1[-1]
                     else:
                         # 13: for %q & Xi+1 do
                         # 14: if q is a super sequence of any v & Vi then
                         # 15: Remove q from Xi+1;
                         for v in violating[i]:
-                            if len(X1) == 0:
+                            if len(Z1) == 0:
                                 break
-                            if all(elem in X1[len(X1) - 1] for elem in v):
-                                del X1[-1]
-        return X1
+                            if all(elem in Z1[len(Z1) - 1] for elem in v):
+                                del Z1[-1]
+        return Z1
 
     def X1_generator_set(self, data, i, X1, violating):
+        Z1 = copy.deepcopy(X1)
         while len(data) > 0:
             candidate = data.pop()
             for comb in data:
                 if candidate[0:i] == comb[0:i] and comb[i] not in candidate:
-                    X1.append([])
-                    X1[len(X1) - 1] = candidate[:]
-                    X1[len(X1) - 1].append(comb[i])
-                    X1[len(X1) - 1] = sorted(X1[len(X1) - 1])
-                    if X1[len(X1) - 1] in X1[0:len(X1) - 1]:
-                        del X1[-1]
+                    Z1.append([])
+                    Z1[len(Z1) - 1] = candidate[:]
+                    Z1[len(Z1) - 1].append(comb[i])
+                    Z1[len(Z1) - 1] = sorted(Z1[len(Z1) - 1])
+                    if Z1[len(Z1) - 1] in Z1[0:len(Z1) - 1]:
+                        del Z1[-1]
                     else:
                         # 13: for %q & Xi+1 do
                         # 14: if q is a super sequence of any v & Vi then
                         # 15: Remove q from Xi+1;
                         for v in violating[i]:
-                            if len(X1) == 0:
+                            if len(Z1) == 0:
                                 break
-                            if all(elem in X1[len(X1) - 1] for elem in v):
-                                del X1[-1]
-        return X1
+                            if all(elem in Z1[len(Z1) - 1] for elem in v):
+                                del Z1[-1]
+        return Z1
 
-
-    def foo_relative(self,q,data,i,X1,violating):
+    def foo_relative(self, q, data, i, X1, violating):
         Z1 = self.X1_generator_relative(data, i, X1, violating)
         q.put(Z1)
 
-    def foo_seq(self,q,data,i,X1,violating):
-        Z1 = self.X1_generator_seq(data,i,X1,violating)
+    def foo_relative_without_q(self, data, i, X1, violating):
+        Z1 = self.X1_generator_relative(data, i, X1, violating)
+        return Z1
+
+    def foo_seq(self, q, data, i, X1, violating):
+        Z1 = self.X1_generator_seq(data, i, X1, violating)
         q.put(Z1)
 
-    def w_create(self, w, i, X1, violating, L, multiprocess):
+    def foo_seq_without_q(self, data, i, X1, violating):
+        Z1 = self.X1_generator_seq(data, i, X1, violating)
+        return Z1
+
+    def foo_set(self, q, data, i, X1, violating):
+        Z1 = self.X1_generator_set(data, i, X1, violating)
+        q.put(Z1)
+
+    def foo_set_without_q(self, data, i, X1, violating):
+        Z1 = self.X1_generator_set(data, i, X1, violating)
+        return Z1
+
+    def foo_multiset(self, q, data, i, X1, violating):
+        Z1 = self.X1_generator_set(data, i, X1, violating)
+        q.put(Z1)
+
+    def foo_multiset_without_q(self, data, i, X1, violating):
+        Z1 = self.X1_generator_set(data, i, X1, violating)
+        return Z1
+
+    def w_create(self, w, i, X1, violating, L, multiprocess, mp_technique):
         X1_new = []
-        if self.bk_type == 'relative':  #sequence time
-            if multiprocess:
-                workers = int(len(w[i]) / 1000) + 1
-                data_chunks = self.chunkIt(w[i], workers)
+        if multiprocess:
+            if mp_technique == "queue":
+                workers_number = os.cpu_count()
+                data_chunks = self.chunkIt(w[i], workers_number)
                 mp.set_start_method('spawn')
                 jobs = []
-                for worker in range(workers):
-                    print("In worker %d out of %d" %(worker+1, workers))
+                for worker in range(workers_number):
+                    print("In worker %d out of %d" % (worker + 1, workers_number))
                     q = mp.Queue()
-                    p = mp.Process(target=self.foo_relative, args=(q, data_chunks[worker], i, X1, violating))
+                    if self.bk_type == 'relative':
+                        p = mp.Process(target=self.foo_relative, args=(q, data_chunks[worker], i, X1, violating))
+                    elif self.bk_type == 'sequence':
+                        p = mp.Process(target=self.foo_seq, args=(q, data_chunks[worker], i, X1, violating))
+                    elif self.bk_type == 'set':
+                        p = mp.Process(target=self.foo_set, args=(q, data_chunks[worker], i, X1, violating))
+                    elif self.bk_type == 'multiset':
+                        p = mp.Process(target=self.foo_multiset, args=(q, data_chunks[worker], i, X1, violating))
                     jobs.append(p)
                     p.start()
                     X1_new += q.get()
-
                 for job in jobs:
                     job.join()
-            else:
+
+
+            elif mp_technique == "pool":
+                pool = mp.Pool()
+                workers = []
+                workers_number = os.cpu_count()
+                data_chunks = self.chunkIt(w[i], workers_number)
+                for worker in range(workers_number):
+                    print("In worker %d out of %d" % (worker + 1, workers_number))
+                    if self.bk_type == 'relative':
+                        workers.append(
+                            pool.apply_async(self.foo_relative_without_q, args=(data_chunks[worker], i, X1, violating)))
+                    elif self.bk_type == 'sequence':
+                        workers.append(
+                            pool.apply_async(self.foo_seq_without_q, args=(data_chunks[worker], i, X1, violating)))
+                    elif self.bk_type == 'set':
+                        workers.append(
+                            pool.apply_async(self.foo_set_without_q, args=(data_chunks[worker], i, X1, violating)))
+                    elif self.bk_type == 'multiset':
+                        workers.append(
+                            pool.apply_async(self.foo_multiset_without_q, args=(data_chunks[worker], i, X1, violating)))
+
+                for work in workers:
+                    X1_new += work.get()
+                pool.close()
+                pool.join()
+
+        else:
+            if self.bk_type == 'relative':
                 X1_new = self.X1_generator_relative(w[i], i, X1, violating)
-
-        elif self.bk_type == 'sequence': #sequence
-            if multiprocess:
-                workers = int(len(w[i]) / 1000) + 1
-                data_chunks = self.chunkIt(w[i], workers)
-                mp.set_start_method('spawn')
-                jobs = []
-                for worker in range(workers):
-                    print("In worker %d out of %d" %(worker+1, workers))
-                    q = mp.Queue()
-                    p = mp.Process(target=self.foo_seq, args=(q, data_chunks[worker],i,X1,violating))
-                    jobs.append(p)
-                    p.start()
-                    X1_new += q.get()
-
-                for job in jobs:
-                    job.join()
-            else:
-                X1_new = self.X1_generator_seq(w[i],i,X1,violating)
-
-        elif self.bk_type == 'multiset': #multiset
-            X1_new = self.X1_generator_multiset(w[i],i,X1,violating)
-
-        elif self.bk_type == 'set': #set
-            X1_new = self.X1_generator_set(w[i],i,X1,violating)
-
+            elif self.bk_type == 'sequence':
+                X1_new = self.X1_generator_seq(w[i], i, X1, violating)
+            elif self.bk_type == 'set':
+                X1_new = self.X1_generator_set(w[i], i, X1, violating)
+            elif self.bk_type == 'multiset':
+                X1_new = self.X1_generator_multiset(w[i], i, X1, violating)
 
         return X1_new
 
-    def w_violating(self,gen,count,violating,prob, K,C,w, i):
+
+    def w_violating(self, gen, count, violating, prob, K, C, w, i):
         if i == 0:
             for q in gen:
                 # 6: if |T(q)|< K or P(s|q) > C then
@@ -447,21 +488,22 @@ class MVS():
                         w[i].append(q)
         return w, violating
 
-    def prob(self, X1, count, el_trace, prob, i, type,first=False):
+
+    def prob(self, X1, count, el_trace, prob, i, type, first=False):
         if first:
             for q in X1:
-              #creating prob(q|s) and count(q)
+                # creating prob(q|s) and count(q)
                 for key, value in self.logsimple.items():
                     tr = value["trace"]
                     S = value["sensitive"]
-                    if self.bk_type == 'set': #or self.bk_type == 'multiset':
+                    if self.bk_type == 'set':  # or self.bk_type == 'multiset':
                         if all(elem in tr for elem in q):
                             count[tuple(q)] += 1
                             el_trace[tuple(q)].append(value)
-                            #listing all values of the different sensitive attributes (key2)
+                            # listing all values of the different sensitive attributes (key2)
                             for key2, value2 in S.items():
                                 prob[tuple(q)][key2].append(value2)
-                    #new multiset (real)
+                    # new multiset (real)
                     elif self.bk_type == 'multiset':
                         for elem in q:
                             for ev in tr:
@@ -495,23 +537,23 @@ class MVS():
                             # listing all values of the different sensitive attributes (key2)
                             for key2, value2 in S.items():
                                 prob[tuple(q)][key2].append(value2)
-                #calculating the distribution of s for q
+            # calculating the distribution of s for q
             for q in X1:
                 prob = self.sens_boxplot(prob, count, q, i)
-        else: # first is false
+        else:  # first is false
             if i == 0:
                 for key, value in self.logsimple.items():
-                  #creating prob(q|s) and count(q)
+                    # creating prob(q|s) and count(q)
                     for q in X1:
                         tr = value["trace"]
                         S = value["sensitive"]
                         if q in tr:
                             count[q] += 1
                             el_trace[q].append(value)
-                            #listing all values of the different sensitive attributes (key2)
+                            # listing all values of the different sensitive attributes (key2)
                             for key2, value2 in S.items():
                                 prob[q][key2].append(value2)
-                    #calculating the distribution of s for q
+                # calculating the distribution of s for q
                 for q in X1:
                     prob = self.sens_boxplot(prob, count, q, i)
             else:
@@ -524,7 +566,7 @@ class MVS():
                                 S = value["sensitive"]
                                 included = True
                                 if self.bk_type == 'sequence':
-                                    if q[i] not in tr[tr.index(q[0])+1::]:
+                                    if q[i] not in tr[tr.index(q[0]) + 1::]:
                                         included = False
                                 else:
                                     if q[i] not in tr:
@@ -544,10 +586,10 @@ class MVS():
                                 S = value["sensitive"]
                                 included = True
                                 if self.bk_type == 'sequence':
-                                    #if something went wrong
-                                    if q[i-1] not in tr:
+                                    # if something went wrong
+                                    if q[i - 1] not in tr:
                                         included = False
-                                    elif q[i] not in tr[tr.index(q[i-1]) + 1::]:
+                                    elif q[i] not in tr[tr.index(q[i - 1]) + 1::]:
                                         included = False
                                 else:
                                     if q[i] not in tr:
@@ -559,18 +601,18 @@ class MVS():
                                         if type(prob[tuple(q)][key2]) is list:
                                             prob[tuple(q)][key2].append(value2)
                         prob = self.sens_boxplot(prob, count, q, i)
-                else: # type is set or multiset
+                else:  # type is set or multiset
                     for key, value in self.logsimple.items():
                         for q in X1:
                             if len(q) == 2:
                                 tr = value["trace"]
                                 S = value["sensitive"]
                                 included = True
-                                for j in range(0,len(q)):
+                                for j in range(0, len(q)):
                                     if q[j][0] not in [ev[0] for ev in tr]:
                                         included = False
                                         break
-                                    #new multiset
+                                    # new multiset
                                     elif self.bk_type == 'multiset':
                                         for ev in tr:
                                             if q[j][0] == ev[0] and q[j][1] > ev[1]:
@@ -582,7 +624,7 @@ class MVS():
                                     for key2, value2 in S.items():
                                         if type(prob[tuple(q)][key2]) is list:
                                             prob[tuple(q)][key2].append(value2)
-                            else: #len q > 2
+                            else:  # len q > 2
                                 tr = value["trace"]
                                 S = value["sensitive"]
                                 included = True
@@ -609,6 +651,7 @@ class MVS():
                         prob = self.sens_boxplot(prob, count, q, i)
                 el_trace = newel_trace.copy()
         return prob, count, el_trace
+
 
     def sens_boxplot(self, prob, count, q, i):
         if i == 0:
@@ -708,6 +751,3 @@ class MVS():
                             highest = newhighest
                 prob[tuple(q)][key] = highest
         return prob
-
-
-

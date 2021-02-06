@@ -17,7 +17,7 @@ class privacyPreserving(object):
         '''
         self.log = xes_importer_factory.apply(log)
 
-    def apply(self, T, L, K, C, sensitive_att, cont, bk_type, trace_attributes, life_cycle, all_life_cycle, alpha, beta, directory, file_name, external_name, multiprocess=True):
+    def apply(self, T, L, K, C, sensitive_att, cont, bk_type, trace_attributes, life_cycle, all_life_cycle, alpha, beta, directory, file_name, external_name, multiprocess=True, mp_technique='pool'):
 
         if bk_type == 'relative':
             dict1 = {
@@ -43,7 +43,7 @@ class privacyPreserving(object):
                             log, violating_length, d, d_l, dict2, max_removed = \
                                 anonymizer.none_relative_type(self.log, log2, sensitive_att, cont, l, k, c, dict1, T,
                                                               trace_attributes, life_cycle, all_life_cycle, bk_type,
-                                                              alpha, beta, multiprocess)
+                                                              alpha, beta, multiprocess, mp_technique)
                             dict1 = dict2
                             for t in T:
                                 self.add_privacy_metadata(log[t])
@@ -61,7 +61,7 @@ class privacyPreserving(object):
                                 log_time, violating_length_time, d_time, d_l_time, dict2, max_removed = \
                                     anonymizer.relative_type(self.log, sensitive_att, cont, t, l, k, c, dict1,
                                                              trace_attributes, life_cycle, all_life_cycle, bk_type,
-                                                             alpha, beta, multiprocess)
+                                                             alpha, beta, multiprocess, mp_technique)
                                 self.add_privacy_metadata(log_time)
                                 if external_name:
                                     privacy_aware_log_dir = os.path.join(directory, file_name)
