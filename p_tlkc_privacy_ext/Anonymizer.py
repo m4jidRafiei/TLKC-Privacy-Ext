@@ -17,14 +17,7 @@ class Anonymizer:
                                                                  time_accuracy='seconds')
         relative_freq = repres.get_relative_freq_in_variants(traces)
         mvs = MVS.MVS(traces, logsimple, sensitive_att, cont, sensitives, bk_type, dict_safe=dict1)
-
-        try:
-            violating, dict1 = mvs.mvs(l, k, c, multiprocess, mp_technique)
-        except Exception as e:
-            print(e)
-            sys.exit(
-                "If you are using multiprocessing, the main function needs to be indicated! Use (if __name__ == '__main__':)")
-
+        violating, dict1 = mvs.mvs(l, k, c, multiprocess, mp_technique)
         violating_length = len(violating.copy())
         suppression_set = repres.suppression_new(violating, relative_freq, alpha, beta)
         traces_removed, max_removed = repres.suppress_traces(logsimple.copy(), suppression_set)
@@ -48,12 +41,13 @@ class Anonymizer:
                                                                  sensitive_att, time_accuracy=t)
         relative_freq = repres.get_relative_freq_in_variants(traces)
         mvs = MVS.MVS(traces, logsimple, sensitive_att, cont, sensitives, bk_type, dict_safe=dict1)
-        try:
-            violating_time, dict1 = mvs.mvs(l, k, c, multiprocess, mp_technique, t)
-        except Exception as e:
-            print(e)
-            sys.exit(
-                "If you are using multiprocessing, the main function needs to be indicated! Use (if __name__ == '__main__':)")
+        # try:
+        violating_time, dict1 = mvs.mvs(l, k, c, multiprocess, mp_technique, t)
+        # except Exception as e:
+        #     print(e)
+        #     if multiprocess:
+        #         sys.exit(
+        #             "If you are using multiprocessing, the main function needs to be indicated! Use (if __name__ == '__main__':)")
 
         violating_length_time = len(violating_time.copy())
         suppression_set = repres.suppression_new(violating_time, relative_freq, alpha, beta)

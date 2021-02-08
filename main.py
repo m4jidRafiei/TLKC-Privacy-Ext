@@ -5,7 +5,7 @@ import os
 if __name__ == '__main__':
     event_log = "Sepsis-Cases-Case-attributes.xes"
     L = [3]
-    K = [5]
+    K = [10]
     C = [1]
     alpha = 0.5  # privacy coefficent
     beta = 0.5  # utility coefficent
