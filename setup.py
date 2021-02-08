@@ -28,7 +28,8 @@ setuptools.setup(
         'numpy >= 1.18.1',
         'p_privacy_metadata == 0.0.4',
         'pandas >= 0.24.2',
-        'mlxtend == 0.14.0'
+        'mlxtend == 0.14.0',
+        'python_dateutil>=2.8.1'
     ],
     project_urls={
         'Source': 'https://github.com/m4jidRafiei/TLKC-Privacy-Ext'

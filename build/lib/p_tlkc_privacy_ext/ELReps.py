@@ -263,14 +263,19 @@ class ELReps():
         return score, mvsEle
 
     def suppress_traces(self,logsimple, sup):
+        max_removed = 0
         for key in logsimple.keys():
+            count_removed = 0
             list_trace = logsimple[key]['trace']
             for i in range(len(list_trace)-1, -1, -1):
                 sub = list_trace[i]
                 if sub in sup:
                     list_trace.remove(sub)
+                    count_removed += 1
+            if count_removed > max_removed:
+                max_removed = count_removed
             logsimple[key]['trace'] = list_trace
-        return logsimple
+        return logsimple, max_removed
 
     def create_trace(self, case, trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix, time_prefix, bk_type,sensitive_attributes,time_accuracy, from_create_event_log):
         sens = {}

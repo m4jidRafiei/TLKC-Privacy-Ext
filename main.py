@@ -23,9 +23,6 @@ if __name__ == '__main__':
     if not os.path.exists(pa_log_dir):
         os.makedirs(pa_log_dir)
     pp = privacyPreserving(event_log)
-    start = datetime.now()
     privacy_aware_log_dir, max_removed = pp.apply(T, L, K, C, sensitive_att, cont, bk_type, event_attributes, life_cycle, all_life_cycle,
                                    alpha, beta, pa_log_dir, pa_log_name, False, multiprocess=multiprocess, mp_technique=mp_technique)
-    end = datetime.now() - start
     print(privacy_aware_log_dir)
-    print(end)

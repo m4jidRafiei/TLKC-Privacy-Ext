@@ -1,7 +1,8 @@
-pyfpgrowth==1.0
-multiset==2.1.1
 pm4py==1.2.10
-numpy>=1.18.1
+multiset==2.1.1
+pyfpgrowth==1.0
 p_privacy_metadata==0.0.4
-pandas==0.24.2
 mlxtend==0.14.0
+numpy>=1.18.2
+pandas>=0.24.2
+python_dateutil>=2.8.1
