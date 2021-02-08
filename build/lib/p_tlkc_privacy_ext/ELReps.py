@@ -415,12 +415,13 @@ class ELReps():
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days >= daysOfmonth:
-                                    daydiff = days - daysOfmonth
-                                    month += 1
-                                    days = daydiff
+                                    # daydiff = days - daysOfmonth
+                                    # month += 1
+                                    # days = daydiff
+                                    days = daysOfmonth
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
-                                                                                day=1 + days, hour=hours,
+                                                                                day=days, hour=hours,
                                                                                 minute=minutes, second=sectim)
                     elif spectime == "minutes":
                         if starttime == 0:
@@ -448,13 +449,13 @@ class ELReps():
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1+ month)[1]
                                 if days >= daysOfmonth:
-                                    daydiff = days - daysOfmonth
-                                    month += 1
-                                    days = daydiff
+                                    days = daysOfmonth
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
-                                                                                day=1 + days, hour=hours,
+                                                                                day= days, hour=hours,
                                                                                 minute=minutes, second=0)
+
+
                     elif spectime == "hours":
                         if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
@@ -479,12 +480,10 @@ class ELReps():
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days >= daysOfmonth:
-                                    daydiff = days - daysOfmonth
-                                    month += 1
-                                    days = daydiff
+                                    days = daysOfmonth
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
-                                                                                day=1 + days, hour=hours, minute=0,
+                                                                                day= days, hour=hours, minute=0,
                                                                                 second=0)
                     elif spectime == "days":
                         if starttime == 0:
@@ -510,12 +509,10 @@ class ELReps():
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days >= daysOfmonth:
-                                    daydiff = days - daysOfmonth
-                                    month += 1
-                                    days = daydiff
+                                    days = daysOfmonth
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
-                                                                                day=1 + days, hour=0, minute=0,
+                                                                                day= days, hour=0, minute=0,
                                                                                 second=0)
                     elif spectime == "original":
                         pass

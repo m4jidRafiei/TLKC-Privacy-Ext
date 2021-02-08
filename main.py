@@ -10,7 +10,7 @@ if __name__ == '__main__':
     alpha = 0.5  # privacy coefficent
     beta = 0.5  # utility coefficent
     sensitive_att = []  # categorical sensitive attributes
-    T = ["minutes"]  # original, seconds, minutes, hours, days
+    T = ["hours"]  # original, seconds, minutes, hours, days
     cont = []  # numerical sensitive attributes
     bk_type = "set"  # set, multiset, sequence, relative
     event_attributes = ['concept:name']  # to simplify the event log
