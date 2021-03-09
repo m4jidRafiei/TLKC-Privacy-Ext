@@ -9,6 +9,7 @@ if __name__ == '__main__':
     C = [1]
     alpha = 0.5  # privacy coefficent
     beta = 0.5  # utility coefficent
+    utility_measure = "variant" # variant, log
     sensitive_att = []  # categorical sensitive attributes
     T = ["hours"]  # original, seconds, minutes, hours, days
     cont = []  # numerical sensitive attributes
@@ -24,5 +25,5 @@ if __name__ == '__main__':
         os.makedirs(pa_log_dir)
     pp = privacyPreserving(event_log)
     privacy_aware_log_dir, max_removed = pp.apply(T, L, K, C, sensitive_att, cont, bk_type, event_attributes, life_cycle, all_life_cycle,
-                                   alpha, beta, pa_log_dir, pa_log_name, False, multiprocess=multiprocess, mp_technique=mp_technique)
+                                   alpha, beta, pa_log_dir, pa_log_name, False, utility_measure=utility_measure, multiprocess=multiprocess, mp_technique=mp_technique)
     print(privacy_aware_log_dir)

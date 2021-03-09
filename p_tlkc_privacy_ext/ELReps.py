@@ -255,6 +255,7 @@ class ELReps():
                 score_val = 0
             else:
                 score_val = alpha * privacy + beta * utility
+                # score_val = (alpha * privacy) / (beta * utility)
 
             score[el] = score_val
             if score[el] == 0:
@@ -414,11 +415,9 @@ class ELReps():
                                                                             minute=minutes, second=sectim)
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
-                                if days >= daysOfmonth:
-                                    # daydiff = days - daysOfmonth
-                                    # month += 1
-                                    # days = daydiff
-                                    days = daysOfmonth
+                                if days + 1 > daysOfmonth:
+                                    month += 1
+                                    days = days - daysOfmonth + 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day=days, hour=hours,
@@ -448,8 +447,9 @@ class ELReps():
                                                                             minute=minutes,second=0)
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1+ month)[1]
-                                if days >= daysOfmonth:
-                                    days = daysOfmonth
+                                if days + 1 > daysOfmonth:
+                                    month += 1
+                                    days = days - daysOfmonth + 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day= days, hour=hours,
@@ -479,8 +479,9 @@ class ELReps():
                                                                           day=1 + days, hour=hours,minute=0,second=0)
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
-                                if days >= daysOfmonth:
-                                    days = daysOfmonth
+                                if days + 1 > daysOfmonth:
+                                    month += 1
+                                    days = days - daysOfmonth + 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day= days, hour=hours, minute=0,
@@ -508,8 +509,9 @@ class ELReps():
                                                                             day= 1+ days, hour=0,minute=0,second=0)
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
-                                if days >= daysOfmonth:
-                                    days = daysOfmonth
+                                if days + 1 > daysOfmonth:
+                                    month += 1
+                                    days = days - daysOfmonth + 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day= days, hour=0, minute=0,

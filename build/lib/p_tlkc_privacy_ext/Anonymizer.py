@@ -10,12 +10,15 @@ class Anonymizer:
         self = self
 
     def none_relative_type(self, log, log2, sensitive_att, cont, l, k, c, dict1, spectime, trace_attributes, life_cycle,
-                           all_life_cycle, bk_type, alpha, beta, multiprocess, mp_technique):
+                           all_life_cycle, bk_type, alpha, beta, utility_measure, multiprocess, mp_technique):
         repres = ELReps.ELReps(log)
         logsimple, traces, sensitives = repres.create_simple_log(bk_type, trace_attributes, life_cycle,
                                                                  all_life_cycle, sensitive_att,
                                                                  time_accuracy='seconds')
-        relative_freq = repres.get_relative_freq_in_variants(traces)
+        if utility_measure == "variant":
+            relative_freq = repres.get_relative_freq_in_variants(traces)
+        elif utility_measure == "log":
+            relative_freq = repres.get_relative_freq_in_log(traces)
         mvs = MVS.MVS(traces, logsimple, sensitive_att, cont, sensitives, bk_type, dict_safe=dict1)
         violating, dict1 = mvs.mvs(l, k, c, multiprocess, mp_technique)
         violating_length = len(violating.copy())
@@ -35,11 +38,15 @@ class Anonymizer:
 
 
     def relative_type(self, log, sensitive_att, cont, t, l, k, c, dict1, trace_attributes, life_cycle, all_life_cycle,
-                  bk_type, alpha, beta, multiprocess, mp_technique):
+                  bk_type, alpha, beta, utility_measure, multiprocess, mp_technique):
         repres = ELReps.ELReps(log)
         logsimple, traces, sensitives = repres.create_simple_log(bk_type, trace_attributes, life_cycle, all_life_cycle,
                                                                  sensitive_att, time_accuracy=t)
-        relative_freq = repres.get_relative_freq_in_variants(traces)
+        if utility_measure == "variant":
+            relative_freq = repres.get_relative_freq_in_variants(traces)
+        elif utility_measure == "log":
+            relative_freq = repres.get_relative_freq_in_log(traces)
+
         mvs = MVS.MVS(traces, logsimple, sensitive_att, cont, sensitives, bk_type, dict_safe=dict1)
         # try:
         violating_time, dict1 = mvs.mvs(l, k, c, multiprocess, mp_technique, t)
