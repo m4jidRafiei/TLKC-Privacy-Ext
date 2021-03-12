@@ -17,7 +17,7 @@ class privacyPreserving(object):
         '''
         self.log = xes_importer_factory.apply(log)
 
-    def apply(self, T, L, K, C, sensitive_att, cont, bk_type, trace_attributes, life_cycle, all_life_cycle, alpha, beta, directory, file_name, external_name, utility_measure="variant", multiprocess=True, mp_technique='pool'):
+    def apply(self, T, L, K, C, sensitive_att, cont, bk_type, trace_attributes, life_cycle, all_life_cycle, alpha, beta, directory, file_name, external_name, utility_measure=[0.5,0.5], multiprocess=True, mp_technique='pool'):
 
         if bk_type == 'relative':
             dict1 = {

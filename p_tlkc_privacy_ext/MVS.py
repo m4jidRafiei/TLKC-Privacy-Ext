@@ -40,7 +40,7 @@ class MVS():
                 w.append([])
                 violating.append([])
                 prob, count, el_trace = self.prob(X1, count, el_trace, prob, i, type, first=True)
-                gen = [q for q in X1 if count[tuple(q)] > 0]
+                gen = [q for q in X1 if count[tuple(q)] > 0] #new commented
                 w, violating = self.w_violating(gen, count, violating, prob, K, C, w, i)
                 # 10: end if
                 # 11: end for
@@ -74,10 +74,11 @@ class MVS():
             el_trace = {el: [] for el in X1}
             prob, count, el_trace = self.prob(X1, count, el_trace, prob, i, type)
             # 5: for all q  in Xi where |T(q)| > 0 do
-            gen = [q for q in X1 if count[tuple(q)] > 0]
+            gen = [q for q in X1 if count[tuple(q)] > 0] #new commented
             violating = [[]]
             w = [[]]
             w, violating = self.w_violating(gen, count, violating, prob, K, C, w, i)
+            non_violating_events_len_1 = w
             # 10: end if
             # 11: end for
             w[0].sort(key=operator.itemgetter(1))
@@ -99,13 +100,17 @@ class MVS():
             elif self.bk_type == 'sequence':  # sequence
                 for iter in range(len(w[0])):
                     candidate = w[0].pop(0)
+                    #new
+                    X1.append([candidate, candidate])
+                    #
                     for comb in w[0]:
-                        if comb[0] != candidate[0]:
-                            X1.append([candidate, comb])
-                        if comb[1] > candidate[1]:
-                            X1.append([candidate, comb])
-                        elif comb[1] < candidate[1]:
-                            X1.append([comb, candidate])
+                        X1.append([candidate, comb])
+                        # if comb[0] != candidate[0]:
+                        #     X1.append([candidate, comb])
+                        # if comb[1] > candidate[1]:
+                        #     X1.append([candidate, comb])
+                        # elif comb[1] < candidate[1]:
+                        #     X1.append([comb, candidate])
                     w[0].append(candidate)
                     iter += 1
             elif self.bk_type == 'set':  # set
@@ -132,7 +137,7 @@ class MVS():
             prob = {tuple(v): {el: [] for el in self.sensitive} for v in X1}
             prob, count, el_trace = self.prob(X1, count, el_trace, prob, i, type)
             # 5: for all q  in Xi where |T(q)| > 0 do
-            gen = [q for q in X1 if count[tuple(q)] > 0]
+            gen = [q for q in X1 if count[tuple(q)] > 0] #new commented
             w, violating = self.w_violating(gen, count, violating, prob, K, C, w, i)
             # 10: end if
             # 11: end for
@@ -140,7 +145,7 @@ class MVS():
             if i < L:
                 X1.clear()
                 # 12: Xi+1 ! Wi ! Wi;
-                X1 = self.w_create(w, i - 1, X1, violating, L, multiprocess, mp_technique)
+                X1 = self.w_create(w, i - 1, X1, violating, L, multiprocess, mp_technique, non_violating_events = non_violating_events_len_1)
                 print("X1: " + str(len(X1)))
             # 18: i++;
 
@@ -179,74 +184,85 @@ class MVS():
 
         return out
 
-    def X1_generator_seq(self, data, i, X1, violating):
+    def X1_generator_seq(self, data, i, X1, violating, non_violating_events):
         # replace w[i] with data
         # copy X1 to Z1
         Z1 = copy.deepcopy(X1)
-        for iter in range(len(data)):
-            candidate = data.pop(0)
-            for comb in data:
-                add = False
-                add2 = False
-                try:
-                    if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]:
-                        add = True
-                except:
-                    print(candidate)
-                    print(comb)
-                    print(i)
-
-                if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]:  # and \
-                    # comb[i][1] >= candidate[i][1]:
-                    add = True
-                elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
-                        and comb[i][1] > candidate[i][1]:
-                    add = True
-                elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
-                        and comb[i][1] < candidate[i][1]:
-                    add2 = True
-                if add:
-                    Z1.append([])
-                    Z1[len(Z1) - 1] = candidate[:]
-                    Z1[len(Z1) - 1].append(comb[i])
-                elif add2:
-                    Z1.append([])
-                    Z1[len(Z1) - 1] = comb[:]
-                    Z1[len(Z1) - 1].append(candidate[i])
-                if add or add2:
-                    if Z1[len(Z1) - 1] in Z1[0:len(Z1) - 1]:
-                        del Z1[-1]
-                    else:
-                        # 13: for %q & Xi+1 do
-                        # 14: if q is a super sequence of any v & Vi then
-                        # 15: Remove q from Xi+1;
-                        if len(Z1) == 0:
-                            break
-                        included = False
-                        for v in violating[i]:
-                            if all(elem in Z1[len(Z1) - 1] for elem in v):
-                                for j in range(0, i + 1):
-                                    if j == 0:
-                                        if v[j] in Z1[len(Z1) - 1]:
-                                            index = Z1[len(Z1) - 1].index(v[j])
-                                        else:
-                                            break
-                                    else:
-                                        if v[j] in Z1[len(Z1) - 1][index + 1::]:
-                                            index = Z1[len(Z1) - 1].index(v[j])
-                                            if j == i:
-                                                included = True
-                                                break
-                                        else:
-                                            break
-                            # if all(elem in X1[len(X1) - 1] for elem in v):
-                            if included:
-                                del Z1[-1]
-                                break
-            data.append(candidate)
-            iter += 1
-
+        # new way----------------------
+        for non_violating in data:
+            for event in non_violating_events[0]:
+                new_cand = copy.deepcopy(non_violating)
+                for index in range(len(non_violating)+1):
+                    new_cand[index:index] = [event]
+                    Z1.append(new_cand)
+                    new_cand = copy.deepcopy(non_violating)
         return Z1
+
+        # new way---------------
+
+        # for iter in range(len(data)):
+        #     candidate = data.pop(0)
+        #     for comb in data:
+        #         add = False
+        #         add2 = False
+        #         try:
+        #             if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]:
+        #                 add = True
+        #         except:
+        #             print(candidate)
+        #             print(comb)
+        #             print(i)
+        #
+        #         if candidate[0:i] == comb[0:i] and comb[i][0] != candidate[i][0]: \
+        #             add = True
+        #         elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
+        #                 and comb[i][1] > candidate[i][1]:
+        #             add = True
+        #         elif candidate[0:i] == comb[0:i] and comb[i][0] == candidate[i][0] \
+        #                 and comb[i][1] < candidate[i][1]:
+        #             add2 = True
+        #         if add:
+        #             Z1.append([])
+        #             Z1[len(Z1) - 1] = candidate[:]
+        #             Z1[len(Z1) - 1].append(comb[i])
+        #         elif add2:
+        #             Z1.append([])
+        #             Z1[len(Z1) - 1] = comb[:]
+        #             Z1[len(Z1) - 1].append(candidate[i])
+        #         if add or add2:
+        #             if Z1[len(Z1) - 1] in Z1[0:len(Z1) - 1]:
+        #                 del Z1[-1]
+        #             else:
+        #                 # 13: for %q & Xi+1 do
+        #                 # 14: if q is a super sequence of any v & Vi then
+        #                 # 15: Remove q from Xi+1;
+        #                 if len(Z1) == 0:
+        #                     break
+        #                 included = False
+        #                 for v in violating[i]:
+        #                     if all(elem in Z1[len(Z1) - 1] for elem in v):
+        #                         for j in range(0, i + 1):
+        #                             if j == 0:
+        #                                 if v[j] in Z1[len(Z1) - 1]:
+        #                                     index = Z1[len(Z1) - 1].index(v[j])
+        #                                 else:
+        #                                     break
+        #                             else:
+        #                                 if v[j] in Z1[len(Z1) - 1][index + 1::]:
+        #                                     index = Z1[len(Z1) - 1].index(v[j])
+        #                                     if j == i:
+        #                                         included = True
+        #                                         break
+        #                                 else:
+        #                                     break
+        #                     # if all(elem in X1[len(X1) - 1] for elem in v):
+        #                     if included:
+        #                         del Z1[-1]
+        #                         break
+        #     data.append(candidate)
+        #     iter += 1
+        #
+        # return Z1
 
     def X1_generator_relative(self, data, i, X1, violating):
         Z1 = copy.deepcopy(X1)
@@ -359,12 +375,12 @@ class MVS():
         Z1 = self.X1_generator_relative(data, i, X1, violating)
         return Z1
 
-    def foo_seq(self, q, data, i, X1, violating):
-        Z1 = self.X1_generator_seq(data, i, X1, violating)
+    def foo_seq(self, q, data, i, X1, violating, non_violating_events):
+        Z1 = self.X1_generator_seq(data, i, X1, violating, non_violating_events)
         q.put(Z1)
 
-    def foo_seq_without_q(self, data, i, X1, violating):
-        Z1 = self.X1_generator_seq(data, i, X1, violating)
+    def foo_seq_without_q(self, data, i, X1, violating, non_violating_events):
+        Z1 = self.X1_generator_seq(data, i, X1, violating, non_violating_events)
         return Z1
 
     def foo_set(self, q, data, i, X1, violating):
@@ -383,7 +399,119 @@ class MVS():
         Z1 = self.X1_generator_set(data, i, X1, violating)
         return Z1
 
-    def w_create(self, w, i, X1, violating, L, multiprocess, mp_technique):
+    def foo_sequence_relative_prob_without_q(self,X1,i,prob,count,newel_trace):
+        result = self.prob_generator_sequence_relative(X1,i,prob,count,newel_trace)
+        return result
+
+    def prob_generator_sequence_relative(self,X1,i,prob,count,newel_trace):
+        for q in X1:
+            if len(q) == 2:
+                try:
+                    for key, value in self.logsimple.items():
+                        # for value in el_trace[q[0]]:
+                        tr = value["trace"]
+                        S = value["sensitive"]
+                        included = False
+                        if self.bk_type == 'sequence':
+                            included = self.is_subsequence(q, tr)
+                            # if q[i] not in tr[tr.index(q[0]) + 1::]:
+                            #     included = False
+                        else:
+                            if q[i] not in tr:
+                                included = False
+                        if included:
+                            count[tuple(q)] += 1
+                            newel_trace[tuple(q)].append(value.copy())
+                            for key2, value2 in S.items():
+                                if type(prob[tuple(q)][key2]) is list:
+                                    prob[tuple(q)][key2].append(value2)
+                except:
+                    print("Candidate len 1 not in log...!")
+            else:
+                # if tuple(q[0:i]) not in el_trace.keys():
+                #     print(el_trace)
+                # else:
+                try:
+                    for key, value in self.logsimple.items():
+                        # for value in el_trace[tuple(q[0:i])]:
+                        tr = value["trace"]
+                        S = value["sensitive"]
+                        included = False
+                        if self.bk_type == 'sequence':
+                            included = self.is_subsequence(q, tr)
+                            # if something went wrong
+                            # if q[i - 1] not in tr:
+                            #     included = False
+                            # elif q[i] not in tr[tr.index(q[i - 1]) + 1::]:
+                            #     included = False
+                        else:
+                            if q[i] not in tr:
+                                included = False
+                        if included:
+                            count[tuple(q)] += 1
+                            newel_trace[tuple(q)].append(value.copy())
+                            for key2, value2 in S.items():
+                                if type(prob[tuple(q)][key2]) is list:
+                                    prob[tuple(q)][key2].append(value2)
+                except:
+                    print("Candidate > len 1 not in log...!")
+        result_dict = {'prob':prob, 'newel_trace':newel_trace,'count':count}
+        return result_dict
+
+
+    def prob_generator_set_multiset(self,X1,i,prob,count):
+        newel_trace = {tuple(el): [] for el in X1}
+        for key, value in self.logsimple.items():
+            for q in X1:
+                if len(q) == 2:
+                    tr = value["trace"]
+                    S = value["sensitive"]
+                    included = True
+                    for j in range(0, len(q)):
+                        if q[j][0] not in [ev[0] for ev in tr]:
+                            included = False
+                            break
+                        # new multiset
+                        elif self.bk_type == 'multiset':
+                            for ev in tr:
+                                if q[j][0] == ev[0] and q[j][1] > ev[1]:
+                                    included = False
+                                    break
+                    if included:
+                        count[tuple(q)] += 1
+                        newel_trace[tuple(q)].append(value.copy())
+                        for key2, value2 in S.items():
+                            if type(prob[tuple(q)][key2]) is list:
+                                prob[tuple(q)][key2].append(value2)
+                else:  # len q > 2
+                    tr = value["trace"]
+                    S = value["sensitive"]
+                    included = True
+                    for j in range(0, len(q)):
+                        # if q[j] not in tr:
+                        #     included = False
+                        #     break
+                        if q[j][0] not in [ev[0] for ev in tr]:
+                            included = False
+                            break
+                            # new multiset
+                        elif self.bk_type == 'multiset':
+                            for ev in tr:
+                                if q[j][0] == ev[0] and q[j][1] > ev[1]:
+                                    included = False
+                                    break
+                    if included:
+                        count[tuple(q)] += 1
+                        newel_trace[tuple(q)].append(value.copy())
+                        for key2, value2 in S.items():
+                            if type(prob[tuple(q)][key2]) is list:
+                                prob[tuple(q)][key2].append(value2)
+        for q in X1:
+            prob = self.sens_boxplot(prob, count, q, i)
+
+        return prob,newel_trace,count
+
+    def w_create(self, w, i, X1, violating, L, multiprocess, mp_technique, non_violating_events = []):
         X1_new = []
         if multiprocess:
             if mp_technique == "queue":
@@ -391,13 +519,16 @@ class MVS():
                 data_chunks = self.chunkIt(w[i], workers_number)
                 mp.set_start_method('spawn')
                 jobs = []
+                if len(data_chunks) < 1:
+                    return []
+
                 for worker in range(workers_number):
-                    print("In worker %d out of %d" % (worker + 1, workers_number))
+                    print("In worker X1 creator %d out of %d" % (worker + 1, workers_number))
                     q = mp.Queue()
                     if self.bk_type == 'relative':
                         p = mp.Process(target=self.foo_relative, args=(q, data_chunks[worker], i, X1, violating))
                     elif self.bk_type == 'sequence':
-                        p = mp.Process(target=self.foo_seq, args=(q, data_chunks[worker], i, X1, violating))
+                        p = mp.Process(target=self.foo_seq, args=(q, data_chunks[worker], i, X1, violating, non_violating_events))
                     elif self.bk_type == 'set':
                         p = mp.Process(target=self.foo_set, args=(q, data_chunks[worker], i, X1, violating))
                     elif self.bk_type == 'multiset':
@@ -414,14 +545,17 @@ class MVS():
                 workers = []
                 workers_number = os.cpu_count()
                 data_chunks = self.chunkIt(w[i], workers_number)
+                if len(data_chunks) < 1:
+                    return []
+
                 for worker in range(workers_number):
-                    print("In worker %d out of %d" % (worker + 1, workers_number))
+                    print("In worker X1 creator %d out of %d" % (worker + 1, workers_number))
                     if self.bk_type == 'relative':
                         workers.append(
                             pool.apply_async(self.foo_relative_without_q, args=(data_chunks[worker], i, X1, violating)))
                     elif self.bk_type == 'sequence':
                         workers.append(
-                            pool.apply_async(self.foo_seq_without_q, args=(data_chunks[worker], i, X1, violating)))
+                            pool.apply_async(self.foo_seq_without_q, args=(data_chunks[worker], i, X1, violating, non_violating_events)))
                     elif self.bk_type == 'set':
                         workers.append(
                             pool.apply_async(self.foo_set_without_q, args=(data_chunks[worker], i, X1, violating)))
@@ -435,10 +569,12 @@ class MVS():
                 pool.join()
 
         else:
+            if len(w[i]) < 1:
+                return []
             if self.bk_type == 'relative':
                 X1_new = self.X1_generator_relative(w[i], i, X1, violating)
             elif self.bk_type == 'sequence':
-                X1_new = self.X1_generator_seq(w[i], i, X1, violating)
+                X1_new = self.X1_generator_seq(w[i], i, X1, violating, non_violating_events)
             elif self.bk_type == 'set':
                 X1_new = self.X1_generator_set(w[i], i, X1, violating)
             elif self.bk_type == 'multiset':
@@ -513,7 +649,6 @@ class MVS():
                                     # listing all values of the different sensitive attributes (key2)
                                     for key2, value2 in S.items():
                                         prob[tuple(q)][key2].append(value2)
-
                     else:
                         included = False
                         for j in range(0, len(q)):
@@ -557,101 +692,61 @@ class MVS():
                 for q in X1:
                     prob = self.sens_boxplot(prob, count, q, i)
             else:
-                newel_trace = {tuple(el): [] for el in X1}
                 if not (self.bk_type == 'set' or self.bk_type == 'multiset'):
+                    newel_trace = {tuple(el): [] for el in X1}
+
+                    results = []
+                    pool = mp.Pool()
+                    workers = []
+                    workers_number = os.cpu_count()
+                    data_chunks = self.chunkIt(X1, workers_number)
+                    for worker in range(workers_number):
+                        print("In worker prob() creator %d out of %d" % (worker + 1, workers_number))
+                        workers.append(
+                                pool.apply_async(self.foo_sequence_relative_prob_without_q, args=(data_chunks[worker], i, prob, count, newel_trace)))
+
+                    for work in workers:
+                        results.append(work.get())
+                    pool.close()
+                    pool.join()
+
+
+                    for result in results:
+                        for key, value in result.items():
+                            if key == 'prob':
+                                for prob_key,prob_value in value.items():
+                                    for sensitive_key, sensitive_value in prob_value.items():
+                                        prob[prob_key][sensitive_key] += sensitive_value
+                            elif key == 'newel_trace':
+                                for el_trace_key, el_trace_value in value.items():
+                                    newel_trace[el_trace_key] += el_trace_value
+                            elif key == 'count':
+                                for count_key,count_value in value.items():
+                                    count[count_key] += count_value
+
+                    # Ohne multiprocessing-------------------
+                    # result_dict = self.prob_generator_sequence_relative(X1,i,prob,count,newel_trace)
+                    # prob = result_dict['prob']
+                    # newel_trace = result_dict['newel_trace']
+                    # count = result_dict['count']
+                    #----------------------------------------
+
                     for q in X1:
-                        if len(q) == 2:
-                            for value in el_trace[q[0]]:
-                                tr = value["trace"]
-                                S = value["sensitive"]
-                                included = True
-                                if self.bk_type == 'sequence':
-                                    if q[i] not in tr[tr.index(q[0]) + 1::]:
-                                        included = False
-                                else:
-                                    if q[i] not in tr:
-                                        included = False
-                                if included:
-                                    count[tuple(q)] += 1
-                                    newel_trace[tuple(q)].append(value.copy())
-                                    for key2, value2 in S.items():
-                                        if type(prob[tuple(q)][key2]) is list:
-                                            prob[tuple(q)][key2].append(value2)
-                        else:
-                            # if tuple(q[0:i]) not in el_trace.keys():
-                            #     print(el_trace)
-                            # else:
-                            for value in el_trace[tuple(q[0:i])]:
-                                tr = value["trace"]
-                                S = value["sensitive"]
-                                included = True
-                                if self.bk_type == 'sequence':
-                                    # if something went wrong
-                                    if q[i - 1] not in tr:
-                                        included = False
-                                    elif q[i] not in tr[tr.index(q[i - 1]) + 1::]:
-                                        included = False
-                                else:
-                                    if q[i] not in tr:
-                                        included = False
-                                if included:
-                                    count[tuple(q)] += 1
-                                    newel_trace[tuple(q)].append(value.copy())
-                                    for key2, value2 in S.items():
-                                        if type(prob[tuple(q)][key2]) is list:
-                                            prob[tuple(q)][key2].append(value2)
                         prob = self.sens_boxplot(prob, count, q, i)
+
                 else:  # type is set or multiset
-                    for key, value in self.logsimple.items():
-                        for q in X1:
-                            if len(q) == 2:
-                                tr = value["trace"]
-                                S = value["sensitive"]
-                                included = True
-                                for j in range(0, len(q)):
-                                    if q[j][0] not in [ev[0] for ev in tr]:
-                                        included = False
-                                        break
-                                    # new multiset
-                                    elif self.bk_type == 'multiset':
-                                        for ev in tr:
-                                            if q[j][0] == ev[0] and q[j][1] > ev[1]:
-                                                included = False
-                                                break
-                                if included:
-                                    count[tuple(q)] += 1
-                                    newel_trace[tuple(q)].append(value.copy())
-                                    for key2, value2 in S.items():
-                                        if type(prob[tuple(q)][key2]) is list:
-                                            prob[tuple(q)][key2].append(value2)
-                            else:  # len q > 2
-                                tr = value["trace"]
-                                S = value["sensitive"]
-                                included = True
-                                for j in range(0, len(q)):
-                                    # if q[j] not in tr:
-                                    #     included = False
-                                    #     break
-                                    if q[j][0] not in [ev[0] for ev in tr]:
-                                        included = False
-                                        break
-                                        # new multiset
-                                    elif self.bk_type == 'multiset':
-                                        for ev in tr:
-                                            if q[j][0] == ev[0] and q[j][1] > ev[1]:
-                                                included = False
-                                                break
-                                if included:
-                                    count[tuple(q)] += 1
-                                    newel_trace[tuple(q)].append(value.copy())
-                                    for key2, value2 in S.items():
-                                        if type(prob[tuple(q)][key2]) is list:
-                                            prob[tuple(q)][key2].append(value2)
-                    for q in X1:
-                        prob = self.sens_boxplot(prob, count, q, i)
+                    prob,newel_trace,count = self.prob_generator_set_multiset(X1,i,prob,count)
+
                 el_trace = newel_trace.copy()
         return prob, count, el_trace
 
+    def is_subsequence(self, x, y):
+        """Test whether x is a subsequence of y"""
+        x = list(x)
+        for letter in y:
+            if x and x[0] == letter:
+                x.pop(0)
+        return not x
 
     def sens_boxplot(self, prob, count, q, i):
         if i == 0:

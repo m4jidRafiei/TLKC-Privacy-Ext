@@ -68,8 +68,9 @@ class ELReps():
             list_mvs = mvsEl[w]
             for l in list_mvs:
                 if l not in violating:
-                    print(l)
-                    print(violating)
+                    pass
+                    # print(l)
+                    # print(violating)
                 else:
                     violating.remove(l)
             list_mfs = mfsEl[w]
@@ -114,8 +115,9 @@ class ELReps():
             list_mvs = mvsEl[w]
             for l in list_mvs:
                 if l not in violating:
-                    print(l)
-                    print(violating)
+                    pass
+                    # print(l)
+                    # print(violating)
                 else:
                     violating.remove(l)
             # 6: update the Score(p) if both w and p are contained in the same MVS or MFS;
@@ -254,6 +256,7 @@ class ELReps():
             if privacy == 0:
                 score_val = 0
             else:
+                # score_val = 2 * (privacy * utility) / utility + privacy
                 score_val = alpha * privacy + beta * utility
                 # score_val = (alpha * privacy) / (beta * utility)
 
@@ -341,8 +344,9 @@ class ELReps():
                     tu = (simple_event[0])
                     trace_temp.append(simple_event[0])
                 elif bk_type == 'sequence':  # or bk_type == 'multiset':
-                    count_event = trace_temp.count(simple_event[0])
-                    simple_event[1] = count_event + 1
+                    # count_event = trace_temp.count(simple_event[0])
+                    # simple_event[1] = count_event + 1
+                    simple_event[1] = 0
                     tu = (simple_event[0], simple_event[1])
                     trace_temp.append(simple_event[0])
                 elif bk_type == 'set':
@@ -414,10 +418,12 @@ class ELReps():
                                                                             day=1 + days, hour=hours,
                                                                             minute=minutes, second=sectim)
                             except:
+
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    days = days - daysOfmonth + 1
+                                    # days = days - daysOfmonth + 1
+                                    days = 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day=days, hour=hours,
@@ -449,10 +455,11 @@ class ELReps():
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1+ month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    days = days - daysOfmonth + 1
+                                    # days = days - daysOfmonth + 1
+                                    days = 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
-                                                                                day= days, hour=hours,
+                                                                                day= days , hour=hours,
                                                                                 minute=minutes, second=0)
 
 
@@ -481,7 +488,8 @@ class ELReps():
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    days = days - daysOfmonth + 1
+                                    # days = days - daysOfmonth + 1
+                                    days = 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day= days, hour=hours, minute=0,
@@ -511,7 +519,8 @@ class ELReps():
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    days = days - daysOfmonth + 1
+                                    # days = days - daysOfmonth + 1
+                                    days = 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day= days, hour=0, minute=0,
@@ -751,11 +760,11 @@ class ELReps():
 
         return flat_list_dict
 
-    def get_relative_freq(self,list_traces): #combines  get_relative_freq_in_log and get_relative_freq_in_variants
+    def get_relative_freq(self,list_traces,utility_measure): #combines  get_relative_freq_in_log and get_relative_freq_in_variants
         freq_in_log = self.get_relative_freq_in_log(list_traces)
         freq_in_variant = self.get_relative_freq_in_variants(list_traces)
         final_freq = {}
         for event,freq in freq_in_log.items():
-            final_freq[event] = (0.5*freq_in_log[event]) + (0.5*freq_in_variant[event])
+            final_freq[event] = (utility_measure[0] * freq_in_log[event]) + (utility_measure[1] * freq_in_variant[event])
 
         return final_freq
