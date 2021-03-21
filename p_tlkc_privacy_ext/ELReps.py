@@ -382,6 +382,7 @@ class ELReps():
             simple_trace, sens = self.create_trace(log[i], trace_attributes, life_cycle, all_life_cycle, life_cycle_prefix,
                                             time_prefix, bk_type, sensitive_attributes, time_accuracy, True)
             starttime = 0
+            time_exception_happend = 0
             while j < len(log[i]): #and k < len(trace):
                 if (bk_type !='multiset' and simple_trace[j] in trace) or \
                         (bk_type =='multiset' and simple_trace[j] in [el[0] for el in trace]):
@@ -417,17 +418,25 @@ class ELReps():
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
                                                                             day=1 + days, hour=hours,
                                                                             minute=minutes, second=sectim)
-                            except:
+                                if time_exception_happend != 0:
+                                    days += time_exception_happend.day
+                                    log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
+                                                                                    month=1 + month,
+                                                                                    day=1 + days, hour=hours,
+                                                                                    minute=minutes, second=sectim)
+                                    if log[i][j]['time:timestamp'] < time_exception_happend:
+                                        log[i][j]['time:timestamp'] = time_exception_happend
 
+                            except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    # days = days - daysOfmonth + 1
-                                    days = 1
+                                    days = days - daysOfmonth + 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day=days, hour=hours,
                                                                                 minute=minutes, second=sectim)
+
                     elif spectime == "minutes":
                         if starttime == 0:
                             starttime = log[i][j]['time:timestamp']
@@ -448,20 +457,28 @@ class ELReps():
                             sectim = diff.seconds
 
                             try:
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
-                                                                            day=1 + days, hour=hours,
+                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month= 1 + month,
+                                                                            day= 1 + days, hour=hours,
                                                                             minute=minutes,second=0)
+                                if time_exception_happend != 0:
+                                    days += time_exception_happend.day
+                                    log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
+                                                                                    month=1 + month,
+                                                                                    day=1 + days, hour=hours,
+                                                                                    minute=minutes, second=0)
+                                    if log[i][j]['time:timestamp'] < time_exception_happend:
+                                        log[i][j]['time:timestamp'] = time_exception_happend
+
                             except:
-                                daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1+ month)[1]
+                                daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    # days = days - daysOfmonth + 1
-                                    days = 1
-                                log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
+                                    days = days - daysOfmonth + 1
+                                    log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
-                                                                                day= days , hour=hours,
+                                                                                day=days, hour=hours,
                                                                                 minute=minutes, second=0)
-
+                                    time_exception_happend = log[i][j]['time:timestamp']
 
                     elif spectime == "hours":
                         if starttime == 0:
@@ -484,12 +501,20 @@ class ELReps():
                             try:
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
                                                                           day=1 + days, hour=hours,minute=0,second=0)
+                                if time_exception_happend != 0:
+                                    days += time_exception_happend.day
+                                    log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
+                                                                                    month=1 + month,
+                                                                                    day=1 + days, hour=hours,
+                                                                                    minute=0, second=0)
+                                    if log[i][j]['time:timestamp'] < time_exception_happend:
+                                        log[i][j]['time:timestamp'] = time_exception_happend
+
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    # days = days - daysOfmonth + 1
-                                    days = 1
+                                    days = days - daysOfmonth + 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day= days, hour=hours, minute=0,
@@ -515,12 +540,20 @@ class ELReps():
                             try:
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years, month=1 + month,
                                                                             day= 1+ days, hour=0,minute=0,second=0)
+                                if time_exception_happend != 0:
+                                    days += time_exception_happend.day
+                                    log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
+                                                                                    month=1 + month,
+                                                                                    day=1 + days, hour=0,
+                                                                                    minute=0, second=0)
+                                    if log[i][j]['time:timestamp'] < time_exception_happend:
+                                        log[i][j]['time:timestamp'] = time_exception_happend
+
                             except:
                                 daysOfmonth = monthrange(log[i][j]['time:timestamp'].year, 1 + month)[1]
                                 if days + 1 > daysOfmonth:
                                     month += 1
-                                    # days = days - daysOfmonth + 1
-                                    days = 1
+                                    days = days - daysOfmonth + 1
                                 log[i][j]['time:timestamp'] = datetime.datetime(year=base_year + years,
                                                                                 month=1 + month,
                                                                                 day= days, hour=0, minute=0,

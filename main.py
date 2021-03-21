@@ -4,15 +4,15 @@ import os
 
 if __name__ == '__main__':
     event_log = "Sepsis-Cases-Case-attributes.xes"
-    L = [3]
+    L = [2]
     K = [20]
-    C = [1]
+    C = [0.5]
     alpha = 0.5  # privacy coefficent
     beta = 0.5  # utility coefficent
     event_in_log = 0.5
     event_in_variant = 0.5
     utility_measure = [event_in_log,event_in_variant]
-    sensitive_att = []  # categorical sensitive attributes
+    sensitive_att = ['Diagnose']  # categorical sensitive attributes
     T = ["minutes"]  # original, seconds, minutes, hours, days
     cont = []  # numerical sensitive attributes
     bk_type = "set"  # set, multiset, sequence, relative
